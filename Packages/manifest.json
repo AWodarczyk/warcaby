@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.6",
+    "com.unity.ugui": "1.0.0",
+    "com.unity.2d.sprite": "1.0.0",
+    "com.unity.2d.spriteshape": "9.0.0"
+  },
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.mirror-networking"
+      ]
+    }
+  ]
+}
