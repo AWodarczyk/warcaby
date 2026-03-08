@@ -193,12 +193,22 @@ namespace Warcaby.UI
 
         public void ShowMessage(string message)
         {
+            // Activate the Toast root GO (background Image); _toastLabel lives on its child.
+            var toastRoot = _toastLabel.transform.parent != null
+                ? _toastLabel.transform.parent.gameObject
+                : _toastLabel.gameObject;
             _toastLabel.text = message;
-            _toastLabel.gameObject.SetActive(true);
+            toastRoot.SetActive(true);
             CancelInvoke(nameof(HideToast));
             Invoke(nameof(HideToast), 3f);
         }
 
-        private void HideToast() => _toastLabel.gameObject.SetActive(false);
+        private void HideToast()
+        {
+            var toastRoot = _toastLabel.transform.parent != null
+                ? _toastLabel.transform.parent.gameObject
+                : _toastLabel.gameObject;
+            toastRoot.SetActive(false);
+        }
     }
 }

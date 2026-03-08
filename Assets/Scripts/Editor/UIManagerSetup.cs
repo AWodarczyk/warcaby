@@ -196,7 +196,8 @@ namespace Warcaby.Editor
             }
 
             // ── Toast ─────────────────────────────────────────────────────
-            assigned += AssignComp<TextMeshProUGUI>     (so, "_toastLabel",       canvasT, "Toast");
+            // TMP lives on the child "ToastText"; parent "Toast" is the background Image GO
+            assigned += AssignComp<TextMeshProUGUI>     (so, "_toastLabel",       canvasT, "Toast/ToastText");
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(uiManager);
@@ -391,6 +392,7 @@ namespace Warcaby.Editor
 
         private static TextMeshProUGUI BuildToast(Transform parent)
         {
+            // Background GO (Image only – cannot share with TextMeshProUGUI)
             var go = GetOrCreate("Toast", parent);
             var rt = go.GetOrAddComponent<RectTransform>();
             rt.anchorMin = new Vector2(0.5f, 0); rt.anchorMax = new Vector2(0.5f, 0);
@@ -400,7 +402,11 @@ namespace Warcaby.Editor
 
             SetImage(go, ColorToastBg, cornerRadius: true);
 
-            var tmp = go.GetOrAddComponent<TextMeshProUGUI>();
+            // Text child GO – Unity does not allow Image + TextMeshProUGUI on the same GO
+            var textGo = GetOrCreate("ToastText", go.transform);
+            StretchFull(textGo.GetOrAddComponent<RectTransform>());
+
+            var tmp = textGo.GetOrAddComponent<TextMeshProUGUI>();
             tmp.text      = "";
             tmp.fontSize  = 22;
             tmp.color     = ColorText;
