@@ -85,24 +85,30 @@ namespace Warcaby.UI
             SetAIColor(0);
             SetAIDifficulty(1);
 
+            // Subscribe here as fallback – OnEnable fires before GameManager.Awake
+            Subscribe();
             ShowMainMenu();
         }
 
-        private void OnEnable()
-        {
-            if (GameManager.Instance == null) return;
-            _gm = GameManager.Instance;
-            _gm.OnBoardChanged += HandleBoardChanged;
-            _gm.OnTurnChanged += HandleTurnChanged;
-            _gm.OnGameOver += HandleGameOver;
-        }
-
+        private void OnEnable()  => Subscribe();
         private void OnDisable()
         {
             if (_gm == null) return;
             _gm.OnBoardChanged -= HandleBoardChanged;
             _gm.OnTurnChanged -= HandleTurnChanged;
             _gm.OnGameOver -= HandleGameOver;
+            _gm = null;
+        }
+
+        /// <summary>Idempotent – safe to call multiple times; subscribes only once.</summary>
+        private void Subscribe()
+        {
+            if (_gm != null) return;                 // already subscribed
+            if (GameManager.Instance == null) return; // not ready yet
+            _gm = GameManager.Instance;
+            _gm.OnBoardChanged += HandleBoardChanged;
+            _gm.OnTurnChanged  += HandleTurnChanged;
+            _gm.OnGameOver     += HandleGameOver;
         }
 
         // ─── Panel navigation ─────────────────────────────────────────────
@@ -141,9 +147,12 @@ namespace Warcaby.UI
                 };
             }
 
+            // Ensure we're subscribed BEFORE StartGame fires OnBoardChanged/OnTurnChanged
+            Subscribe();
+
             GameManager.Instance.StartGame(mode, humanColor);
             SetActivePanel(_gamePanel);
-            UpdateHUD();
+            UpdateHUD(GameManager.Instance.Board);
         }
 
         // ─── AI segmented controls ────────────────────────────────────────
