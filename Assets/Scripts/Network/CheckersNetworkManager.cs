@@ -43,14 +43,9 @@ namespace Warcaby.Network
         public override void OnServerDisconnect(NetworkConnectionToClient conn)
         {
             base.OnServerDisconnect(conn);
-            // Notify remaining player
-            RpcOpponentDisconnected();
-        }
-
-        [ClientRpc]
-        private void RpcOpponentDisconnected()
-        {
-            UI.UIManager.Instance?.ShowMessage("Przeciwnik rozłączył się.");
+            // Delegate RPC to NetworkGameManager (a proper NetworkBehaviour)
+            var ngm = FindObjectOfType<NetworkGameManager>();
+            ngm?.NotifyOpponentDisconnected();
         }
     }
 }

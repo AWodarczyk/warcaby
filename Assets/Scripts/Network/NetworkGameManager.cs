@@ -71,6 +71,14 @@ namespace Warcaby.Network
             GameManager.Instance?.TriggerGameOver(result);
         }
 
+        // ─── Disconnect notification ──────────────────────────────────────
+
+        [ClientRpc]
+        public void NotifyOpponentDisconnected()
+        {
+            UI.UIManager.Instance?.ShowMessage("Przeciwnik rozłączył się.");
+        }
+
         // ─── Serialization ────────────────────────────────────────────────
 
         private static byte[] SerializeBoard(Board board)
