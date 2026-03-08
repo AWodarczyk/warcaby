@@ -576,14 +576,17 @@ namespace Warcaby.Editor
             itemTmp.color    = ColorText;
             itemTmp.alignment = TextAlignmentOptions.Left;
 
-            // Wire TMP_Dropdown template references via SerializedObject so Unity
-            // actually serializes (persists) them to the scene file.
-            // Direct property assignment (drop.template = ...) is NOT saved by the Editor.
-            var dropSO = new SerializedObject(drop);
-            dropSO.FindProperty("m_Template").objectReferenceValue  = templateRt;
-            dropSO.FindProperty("m_ItemText").objectReferenceValue  = itemTmp;
-            dropSO.FindProperty("m_CaptionText").objectReferenceValue = lbl;
-            dropSO.ApplyModifiedPropertiesWithoutUndo();
+            // Wire TMP_Dropdown template references.
+            // SerializedObject approach fails when the internal field name differs between
+            // TMP versions.  Use reflection so we always hit the actual backing field,
+            // then record the object with Undo and mark it dirty so Unity serializes it.
+            SetDropdownField(drop, "m_Template",    templateRt);
+            SetDropdownField(drop, "m_ItemText",    itemTmp);
+            SetDropdownField(drop, "m_CaptionText", lbl);
+            Undo.RecordObject(drop, "Wire dropdown");
+            drop.template    = templateRt;   // also set via property to keep runtime state
+            drop.itemText    = itemTmp;
+            drop.captionText = lbl;
             EditorUtility.SetDirty(drop);
 
             // Template must be inactive at runtime (TMP_Dropdown activates it on Show())
@@ -684,6 +687,29 @@ namespace Warcaby.Editor
         // ═════════════════════════════════════════════════════════════════
         // Utility helpers
         // ═════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Sets a private serialized field on TMP_Dropdown via reflection, then marks
+        /// the component dirty so Unity persists the change to the scene file.
+        /// This is more reliable than SerializedObject.FindProperty() because the
+        /// internal field name may differ across TMP package versions.
+        /// </summary>
+        private static void SetDropdownField(TMP_Dropdown drop, string fieldName, object value)
+        {
+            const System.Reflection.BindingFlags Flags =
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Instance;
+
+            var type = typeof(TMP_Dropdown);
+            while (type != null)
+            {
+                var fi = type.GetField(fieldName, Flags);
+                if (fi != null) { fi.SetValue(drop, value); return; }
+                type = type.BaseType;
+            }
+            Debug.LogWarning($"[UIManagerSetup] TMP_Dropdown field '{fieldName}' not found " +
+                             $"– wiring via property only.");
+        }
 
         private static GameObject GetOrCreate(string name, Transform parent)
         {
