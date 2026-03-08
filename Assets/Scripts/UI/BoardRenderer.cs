@@ -40,7 +40,13 @@ namespace Warcaby.UI
         {
             CreateTiles();
             _gm = GameManager.Instance;
+            if (_gm == null) { Debug.LogError("[BoardRenderer] GameManager not found!"); return; }
             _gm.OnBoardChanged += Redraw;
+
+            // GameBootstrap.Start() may have already called StartGame() before we subscribed.
+            // If the board is already initialized, draw it immediately.
+            if (_gm.Board != null)
+                Redraw(_gm.Board);
         }
 
         private void OnDestroy()

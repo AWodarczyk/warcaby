@@ -63,7 +63,8 @@ namespace Warcaby.Editor
 
             // ── BoardRenderer ─────────────────────────────────────────
             var boardGo = FindOrCreate("BoardRenderer");
-            boardGo.GetOrAddComp<UI.BoardRenderer>();
+            var renderer = boardGo.GetOrAddComp<UI.BoardRenderer>();
+            WireBoardRendererPrefabs(renderer);
 
             // ── UIManager ─────────────────────────────────────────────
             // UIManagerSetup will create Canvas_UI as a child of UIManager
@@ -94,6 +95,41 @@ namespace Warcaby.Editor
         }
 
         // ─── Helpers ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Loads tile and piece prefabs from Assets/Prefabs/ and wires them to the
+        /// BoardRenderer component so the board is visible without manual Inspector work.
+        /// </summary>
+        private static void WireBoardRendererPrefabs(UI.BoardRenderer renderer)
+        {
+            const string p = "Assets/Prefabs/";
+            var prefabMap = new System.Collections.Generic.Dictionary<string, string>
+            {
+                { "_lightTilePrefab",   p + "LightTile.prefab"  },
+                { "_darkTilePrefab",    p + "DarkTile.prefab"   },
+                { "_whitePiecePrefab",  p + "WhitePiece.prefab" },
+                { "_blackPiecePrefab",  p + "BlackPiece.prefab" },
+                { "_whiteKingPrefab",   p + "WhiteKing.prefab"  },
+                { "_blackKingPrefab",   p + "BlackKing.prefab"  },
+            };
+
+            var so = new SerializedObject(renderer);
+            int wired = 0;
+            foreach (var kv in prefabMap)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<GameObject>(kv.Value);
+                if (asset == null)
+                {
+                    Debug.LogWarning($"[GameSceneSetup] Prefab not found: {kv.Value} – run 'Create All Prefabs' first.");
+                    continue;
+                }
+                var prop = so.FindProperty(kv.Key);
+                if (prop != null) { prop.objectReferenceValue = asset; wired++; }
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(renderer);
+            Debug.Log($"[GameSceneSetup] BoardRenderer: wired {wired}/6 prefabs.");
+        }
 
         private static GameObject FindOrCreate(string name)
         {
