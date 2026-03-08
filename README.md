@@ -4,6 +4,18 @@ Gra w warcaby napisana w Unity. Obsługuje tryb Gracz vs Gracz (lokalnie), Gracz
 
 ---
 
+## ▶ Szybki start (Quick Start)
+
+1. Otwórz folder `/warcaby` jako projekt w Unity 2022.3 LTS+
+2. Poczekaj aż Unity pobierze pakiety i skompiluje skrypty
+3. W górnym menu kliknij: **Tools → Warcaby → ★ SETUP EVERYTHING ★**
+4. Otwórz scenę `Assets/Scenes/MainMenu.unity`
+5. Naciśnij **▶ Play**
+
+> Skrypt `SETUP EVERYTHING` automatycznie: generuje prefaby, tworzy i konfiguruje sceny Game i MainMenu, buduje UI Canvas, konfiguruje Mirror – wszystko jednym kliknięciem.
+
+---
+
 ## Wymagania
 
 | Narzędzie | Wersja |
