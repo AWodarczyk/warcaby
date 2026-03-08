@@ -474,38 +474,114 @@ namespace Warcaby.Editor
         private static TMP_Dropdown MakeDropdown(Transform parent, string name,
             string placeholder, string[] options, float x, float y, float w, float h)
         {
-            var go  = GetOrCreate(name, parent);
+            // ── Root button GO ────────────────────────────────────────────
+            var go = GetOrCreate(name, parent);
             CenterRect(go.GetOrAddComponent<RectTransform>(), x, y, w, h);
             SetImage(go, new Color(0.2f, 0.2f, 0.2f, 1f));
 
             var drop = go.GetOrAddComponent<TMP_Dropdown>();
             drop.ClearOptions();
-            var list = new System.Collections.Generic.List<TMP_Dropdown.OptionData>();
-            foreach (var o in options) list.Add(new TMP_Dropdown.OptionData(o));
-            drop.AddOptions(list);
+            var optList = new System.Collections.Generic.List<TMP_Dropdown.OptionData>();
+            foreach (var o in options) optList.Add(new TMP_Dropdown.OptionData(o));
+            drop.AddOptions(optList);
 
-            // Label child
+            // ── Caption Label ─────────────────────────────────────────────
             var labelGo = GetOrCreate("Label", go.transform);
-            StretchFull(labelGo.GetOrAddComponent<RectTransform>(),
-                new RectOffset(10, 30, 0, 0));
-            var lbl       = labelGo.GetOrAddComponent<TextMeshProUGUI>();
-            lbl.text      = placeholder;
-            lbl.fontSize  = 16;
-            lbl.color     = ColorText;
+            StretchFull(labelGo.GetOrAddComponent<RectTransform>(), new RectOffset(10, 30, 0, 0));
+            var lbl      = labelGo.GetOrAddComponent<TextMeshProUGUI>();
+            lbl.text     = placeholder;
+            lbl.fontSize = 16;
+            lbl.color    = ColorText;
             drop.captionText = lbl;
 
-            // Arrow child
-            var arrowGo  = GetOrCreate("Arrow", go.transform);
-            var arrowRt  = arrowGo.GetOrAddComponent<RectTransform>();
+            // ── Arrow ─────────────────────────────────────────────────────
+            var arrowGo = GetOrCreate("Arrow", go.transform);
+            var arrowRt = arrowGo.GetOrAddComponent<RectTransform>();
             arrowRt.anchorMin = new Vector2(1, 0.5f); arrowRt.anchorMax = new Vector2(1, 0.5f);
             arrowRt.pivot     = new Vector2(1, 0.5f);
             arrowRt.anchoredPosition = new Vector2(-5, 0);
             arrowRt.sizeDelta = new Vector2(20, 20);
-            var arrowTmp  = arrowGo.GetOrAddComponent<TextMeshProUGUI>();
+            var arrowTmp = arrowGo.GetOrAddComponent<TextMeshProUGUI>();
             arrowTmp.text      = "▼";
             arrowTmp.fontSize  = 14;
             arrowTmp.color     = ColorText;
             arrowTmp.alignment = TextAlignmentOptions.Right;
+
+            // ── Template (required by TMP_Dropdown to show the list) ──────
+            var templateGo = GetOrCreate("Template", go.transform);
+            var templateRt = templateGo.GetOrAddComponent<RectTransform>();
+            templateRt.anchorMin = new Vector2(0, 0);
+            templateRt.anchorMax = new Vector2(1, 0);
+            templateRt.pivot     = new Vector2(0.5f, 1);
+            templateRt.anchoredPosition = new Vector2(0, 2);
+            templateRt.sizeDelta = new Vector2(0, 150);
+            SetImage(templateGo, new Color(0.15f, 0.15f, 0.15f, 1f));
+
+            var scrollRect = templateGo.GetOrAddComponent<UnityEngine.UI.ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.movementType = UnityEngine.UI.ScrollRect.MovementType.Clamped;
+
+            // Viewport
+            var viewportGo = GetOrCreate("Viewport", templateGo.transform);
+            var viewportRt = viewportGo.GetOrAddComponent<RectTransform>();
+            viewportRt.anchorMin = Vector2.zero; viewportRt.anchorMax = Vector2.one;
+            viewportRt.offsetMin = Vector2.zero; viewportRt.offsetMax = new Vector2(-18, 0);
+            viewportGo.GetOrAddComponent<UnityEngine.UI.Mask>().showMaskGraphic = false;
+            SetImage(viewportGo, Color.white);
+            scrollRect.viewport = viewportRt;
+
+            // Content
+            var contentGo = GetOrCreate("Content", viewportGo.transform);
+            var contentRt = contentGo.GetOrAddComponent<RectTransform>();
+            contentRt.anchorMin = new Vector2(0, 1); contentRt.anchorMax = new Vector2(1, 1);
+            contentRt.pivot     = new Vector2(0.5f, 1);
+            contentRt.anchoredPosition = Vector2.zero;
+            contentRt.sizeDelta = new Vector2(0, 28);
+            scrollRect.content = contentRt;
+
+            // Item (Toggle – required by TMP_Dropdown)
+            var itemGo = GetOrCreate("Item", contentGo.transform);
+            var itemRt = itemGo.GetOrAddComponent<RectTransform>();
+            itemRt.anchorMin = new Vector2(0, 0.5f); itemRt.anchorMax = new Vector2(1, 0.5f);
+            itemRt.sizeDelta = new Vector2(0, 28);
+            SetImage(itemGo, new Color(0.1f, 0.1f, 0.1f, 0));
+
+            var itemToggle = itemGo.GetOrAddComponent<UnityEngine.UI.Toggle>();
+
+            // Item Background
+            var bgGo = GetOrCreate("Item Background", itemGo.transform);
+            var bgRt = bgGo.GetOrAddComponent<RectTransform>();
+            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+            SetImage(bgGo, new Color(0.25f, 0.25f, 0.25f, 1f));
+            itemToggle.targetGraphic = bgGo.GetComponent<UnityEngine.UI.Image>();
+
+            // Item Checkmark
+            var checkGo = GetOrCreate("Item Checkmark", itemGo.transform);
+            var checkRt = checkGo.GetOrAddComponent<RectTransform>();
+            checkRt.anchorMin = new Vector2(0, 0.5f); checkRt.anchorMax = new Vector2(0, 0.5f);
+            checkRt.pivot     = new Vector2(0.5f, 0.5f);
+            checkRt.anchoredPosition = new Vector2(10, 0);
+            checkRt.sizeDelta = new Vector2(20, 20);
+            SetImage(checkGo, ColorGold);
+            itemToggle.graphic = checkGo.GetComponent<UnityEngine.UI.Image>();
+
+            // Item Label
+            var itemLabelGo = GetOrCreate("Item Label", itemGo.transform);
+            StretchFull(itemLabelGo.GetOrAddComponent<RectTransform>(),
+                new RectOffset(25, 5, 0, 0));
+            var itemTmp      = itemLabelGo.GetOrAddComponent<TextMeshProUGUI>();
+            itemTmp.text     = "Option";
+            itemTmp.fontSize = 14;
+            itemTmp.color    = ColorText;
+            itemTmp.alignment = TextAlignmentOptions.Left;
+
+            // Wire TMP_Dropdown template references
+            drop.template  = templateRt;
+            drop.itemText  = itemTmp;
+
+            // Template must be inactive at runtime (TMP_Dropdown activates it on Show())
+            templateGo.SetActive(false);
 
             return drop;
         }
