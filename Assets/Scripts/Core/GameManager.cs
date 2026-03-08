@@ -141,6 +141,13 @@ namespace Warcaby
             if (IsAITurn()) TriggerAI();
         }
 
+        /// <summary>Called externally (e.g. NetworkGameManager) to signal game over.</summary>
+        public void TriggerGameOver(GameResult result)
+        {
+            Result = result;
+            OnGameOver?.Invoke(result);
+        }
+
         private void RefreshLegalMoves() =>
             _legalMoves = GameRules.GetLegalMoves(Board, CurrentPlayer);
 

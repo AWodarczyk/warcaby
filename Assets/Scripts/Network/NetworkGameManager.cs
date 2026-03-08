@@ -68,7 +68,7 @@ namespace Warcaby.Network
         [ClientRpc]
         private void RpcGameOver(Core.GameResult result)
         {
-            GameManager.Instance?.OnGameOver(result); // expose via public event
+            GameManager.Instance?.TriggerGameOver(result);
         }
 
         // ─── Serialization ────────────────────────────────────────────────
