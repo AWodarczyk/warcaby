@@ -94,8 +94,7 @@ namespace Warcaby.Editor
             else
             {
                 nmGo = new GameObject("NetworkManager");
-                cnm  = Undo.AddComponent<Network.CheckersNetworkManager>(nmGo);
-                Undo.RegisterCreatedObjectUndo(nmGo, "Add CheckersNetworkManager");
+                cnm  = nmGo.AddComponent<Network.CheckersNetworkManager>();
                 Debug.Log("[NetworkSceneSetup] Created CheckersNetworkManager GO.");
             }
 
@@ -103,7 +102,7 @@ namespace Warcaby.Editor
             // KcpTransport is Mirror's default UDP transport (bundled with Mirror package)
             Transport transport = nmGo.GetComponent<Mirror.KcpTransport>();
             if (transport == null)
-                transport = Undo.AddComponent<Mirror.KcpTransport>(nmGo);
+                transport = nmGo.AddComponent<Mirror.KcpTransport>();
 
             // Assign transport to NetworkManager via SerializedObject
             var nmSo = new SerializedObject(cnm);

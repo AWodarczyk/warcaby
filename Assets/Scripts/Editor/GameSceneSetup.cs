@@ -109,9 +109,13 @@ namespace Warcaby.Editor
 
     internal static class GameObjectExtHelper
     {
+        /// <summary>
+        /// Returns existing component or adds a new one using plain AddComponent.
+        /// Undo.AddComponent returns null on freshly created, unregistered GameObjects.
+        /// </summary>
         public static T GetOrAddComp<T>(this GameObject go) where T : Component
         {
-            return go.GetComponent<T>() ?? Undo.AddComponent<T>(go);
+            return go.GetComponent<T>() ?? go.AddComponent<T>();
         }
     }
 }

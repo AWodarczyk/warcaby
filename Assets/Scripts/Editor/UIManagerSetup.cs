@@ -42,22 +42,22 @@ namespace Warcaby.Editor
 
             // Ensure RectTransform exists first (Canvas requires it)
             if (canvasGo.GetComponent<RectTransform>() == null)
-                Undo.AddComponent<RectTransform>(canvasGo);
+                canvasGo.AddComponent<RectTransform>();
 
             var canvas = canvasGo.GetComponent<Canvas>();
             if (canvas == null)
-                canvas = Undo.AddComponent<Canvas>(canvasGo);
+                canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 10;
 
             var scaler = canvasGo.GetComponent<CanvasScaler>();
             if (scaler == null)
-                scaler = Undo.AddComponent<CanvasScaler>(canvasGo);
+                scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
 
             if (canvasGo.GetComponent<GraphicRaycaster>() == null)
-                Undo.AddComponent<GraphicRaycaster>(canvasGo);
+                canvasGo.AddComponent<GraphicRaycaster>();
 
             // ── EventSystem (required for UI interaction) ────────────────
             if (GameObject.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
@@ -618,11 +618,16 @@ namespace Warcaby.Editor
     // ── Extension method so GetOrAddComponent stays tidy ─────────────────
     internal static class GameObjectExtensions
     {
+        /// <summary>
+        /// Returns existing component or adds a new one.
+        /// Uses plain AddComponent – Undo.AddComponent returns null on freshly
+        /// created GameObjects that have not yet been registered with Undo.
+        /// </summary>
         public static T GetOrAddComponent<T>(this GameObject go) where T : Component
         {
             var existing = go.GetComponent<T>();
             if (existing != null) return existing;
-            return Undo.AddComponent<T>(go);
+            return go.AddComponent<T>();
         }
     }
 }
