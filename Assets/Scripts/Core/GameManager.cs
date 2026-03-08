@@ -57,7 +57,10 @@ namespace Warcaby
         {
             _gameMode = mode;
             if (mode == GameMode.VsAI)
+            {
                 _aiColor = humanColor.Opponent();
+                _aiDepth = GameSettings.AIDepth;
+            }
 
             Board = Board.CreateInitial();
             CurrentPlayer = PlayerColor.White;
