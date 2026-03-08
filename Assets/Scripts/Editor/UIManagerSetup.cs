@@ -121,6 +121,121 @@ namespace Warcaby.Editor
                 "UI Manager zostal skonfigurowany.\nWszystkie referencje zostaly przypisane.", "OK");
         }
 
+        // ─────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Finds every UI element in the existing Canvas hierarchy by name
+        /// and assigns all serialized fields on UIManager without rebuilding anything.
+        /// </summary>
+        [MenuItem("Tools/Warcaby/Assign UI References")]
+        public static void AssignUIReferences()
+        {
+            var uiManager = Object.FindObjectOfType<UI.UIManager>();
+            if (uiManager == null)
+            {
+                EditorUtility.DisplayDialog("Warcaby",
+                    "Nie znaleziono UIManager w scenie.\nUruchom najpierw 'Setup UI Manager'.", "OK");
+                return;
+            }
+
+            // Root canvas path: UIManager/Canvas_UI
+            var canvasT = uiManager.transform.Find("Canvas_UI");
+            if (canvasT == null)
+            {
+                EditorUtility.DisplayDialog("Warcaby",
+                    "Nie znaleziono Canvas_UI.\nUruchom najpierw 'Setup UI Manager'.", "OK");
+                return;
+            }
+
+            var so = new SerializedObject(uiManager);
+            int assigned = 0;
+
+            // ── Panels ────────────────────────────────────────────────────
+            assigned += Assign(so, "_mainMenuPanel",  canvasT, "Panel_MainMenu");
+            assigned += Assign(so, "_gamePanel",      canvasT, "Panel_Game");
+            assigned += Assign(so, "_gameOverPanel",  canvasT, "Panel_GameOver");
+            assigned += Assign(so, "_onlinePanel",    canvasT, "Panel_Online");
+
+            // ── Main Menu ─────────────────────────────────────────────────
+            var mm = canvasT.Find("Panel_MainMenu");
+            if (mm != null)
+            {
+                assigned += AssignComp<Button>          (so, "_btnPvP",               mm, "Btn_PvP");
+                assigned += AssignComp<Button>          (so, "_btnVsAI",              mm, "Btn_VsAI");
+                assigned += AssignComp<Button>          (so, "_btnOnline",            mm, "Btn_Online");
+                assigned += AssignComp<TMP_Dropdown>    (so, "_aiColorDropdown",      mm, "AIOptions/Dropdown_AIColor");
+                assigned += AssignComp<TMP_Dropdown>    (so, "_aiDifficultyDropdown", mm, "AIOptions/Dropdown_AIDiff");
+            }
+
+            // ── In-Game HUD ───────────────────────────────────────────────
+            var gp = canvasT.Find("Panel_Game");
+            if (gp != null)
+            {
+                assigned += AssignComp<TextMeshProUGUI> (so, "_turnLabel",            gp, "TopBar/Label_Turn");
+                assigned += AssignComp<TextMeshProUGUI> (so, "_whitePiecesLabel",     gp, "TopBar/Label_White");
+                assigned += AssignComp<TextMeshProUGUI> (so, "_blackPiecesLabel",     gp, "TopBar/Label_Black");
+                assigned += AssignComp<Button>          (so, "_btnResign",            gp, "BottomBar/Btn_Resign");
+            }
+
+            // ── Game Over ─────────────────────────────────────────────────
+            var go2 = canvasT.Find("Panel_GameOver");
+            if (go2 != null)
+            {
+                assigned += AssignComp<TextMeshProUGUI> (so, "_gameOverLabel",        go2, "Label_GameOver");
+                assigned += AssignComp<Button>          (so, "_btnPlayAgain",         go2, "Btn_PlayAgain");
+                assigned += AssignComp<Button>          (so, "_btnMainMenu",          go2, "Btn_MainMenu");
+            }
+
+            // ── Online ────────────────────────────────────────────────────
+            var op = canvasT.Find("Panel_Online");
+            if (op != null)
+            {
+                assigned += AssignComp<TMP_InputField>  (so, "_serverAddressInput",   op, "Input_ServerAddress");
+                assigned += AssignComp<Button>          (so, "_btnHost",              op, "Btn_Host");
+                assigned += AssignComp<Button>          (so, "_btnJoin",              op, "Btn_Join");
+            }
+
+            // ── Toast ─────────────────────────────────────────────────────
+            assigned += AssignComp<TextMeshProUGUI>     (so, "_toastLabel",       canvasT, "Toast");
+
+            so.ApplyModifiedProperties();
+            EditorUtility.SetDirty(uiManager);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+                UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+
+            string msg = $"Przypisano {assigned} referencji do UIManager.";
+            Debug.Log($"[UIManagerSetup] {msg}");
+            EditorUtility.DisplayDialog("Warcaby", msg, "OK");
+        }
+
+        // ── Assign helpers ────────────────────────────────────────────────
+
+        /// <summary>Assigns a GameObject reference by searching child path.</summary>
+        private static int Assign(SerializedObject so, string fieldName,
+            Transform root, string childPath)
+        {
+            var t = root.Find(childPath);
+            if (t == null) { Debug.LogWarning($"[UIManagerSetup] Not found: {childPath}"); return 0; }
+            var prop = so.FindProperty(fieldName);
+            if (prop == null) { Debug.LogWarning($"[UIManagerSetup] Property not found: {fieldName}"); return 0; }
+            prop.objectReferenceValue = t.gameObject;
+            return 1;
+        }
+
+        /// <summary>Assigns a Component reference by searching child path.</summary>
+        private static int AssignComp<T>(SerializedObject so, string fieldName,
+            Transform root, string childPath) where T : Component
+        {
+            var t = root.Find(childPath);
+            if (t == null) { Debug.LogWarning($"[UIManagerSetup] Not found: {childPath}"); return 0; }
+            var comp = t.GetComponent<T>();
+            if (comp == null) { Debug.LogWarning($"[UIManagerSetup] Component {typeof(T).Name} missing on: {childPath}"); return 0; }
+            var prop = so.FindProperty(fieldName);
+            if (prop == null) { Debug.LogWarning($"[UIManagerSetup] Property not found: {fieldName}"); return 0; }
+            prop.objectReferenceValue = comp;
+            return 1;
+        }
+
         // ═════════════════════════════════════════════════════════════════
         // Panel builders
         // ═════════════════════════════════════════════════════════════════
