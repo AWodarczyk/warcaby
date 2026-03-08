@@ -62,14 +62,14 @@ Stwórz Canvas z przyciskami PvP / vs AI / Online i obsłuż ładowanie sceny Ga
 
 ### 3. Online Multiplayer (Mirror)
 
-1. Zainstaluj Mirror przez Package Manager lub OpenUPM:
-   ```
-   openupm add com.mirror-networking.mirror
-   ```
-2. W scenie Game:
-   - Dodaj `CheckersNetworkManager` jako komponent (zastępuje domyślny `NetworkManager`).
-   - Przypisz **Network Game Manager Prefab** z komponentem `NetworkGameManager`.
-   - Przypisz **Player Prefab** z komponentem `NetworkPlayer`.
+1. Mirror jest już dodany do `Packages/manifest.json` – Unity pobierze go automatycznie przy otwarciu projektu.
+2. W Unity uruchom: **Tools → Warcaby → Setup Network (Game Scene)**
+   - Skrypt automatycznie:
+     - Dodaje `CheckersNetworkManager` do sceny Game (zastępuje domyślny `NetworkManager`)
+     - Przypisuje **NetworkPlayer** prefab
+     - Przypisuje **NetworkGameManager** prefab
+     - Rejestruje oba prefaby na liście Spawnable Mirror
+   > **Wymaganie:** przed tym krokiem uruchom `Tools → Warcaby → Create All Prefabs`
 
 ---
 
