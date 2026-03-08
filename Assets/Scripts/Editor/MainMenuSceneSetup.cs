@@ -178,9 +178,97 @@ namespace Warcaby.Editor
             AddSceneToBuildSettings(ScenePath);
             AddSceneToBuildSettings("Assets/Scenes/Game.unity");
 
+            // ── Patch Game scene with GameBootstrap ───────────────────
+            bool bootstrapAdded = AddGameBootstrapToGameScene(silent: true);
+
+            string msg = $"Scena MainMenu zapisana:\n{ScenePath}\n\nObie sceny dodane do Build Settings.";
+            if (bootstrapAdded)
+                msg += "\n\nGameBootstrap dodany do sceny Game.";
+            else
+                msg += "\n\n⚠ Nie znaleziono sceny Game – uruchom\n'Add GameBootstrap to Game Scene'\npo ręcznym stworzeniu sceny Game.";
+
             Debug.Log("[MainMenuSceneSetup] MainMenu scene created at " + ScenePath);
-            EditorUtility.DisplayDialog("Warcaby",
-                $"Scena MainMenu zapisana:\n{ScenePath}\n\nObie sceny dodane do Build Settings.", "OK");
+            EditorUtility.DisplayDialog("Warcaby", msg, "OK");
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Opens the Game scene, finds the GameObject with GameManager,
+        /// adds GameBootstrap to it (if missing), saves the scene and returns
+        /// to whatever was open before.
+        /// </summary>
+        [MenuItem("Tools/Warcaby/Add GameBootstrap to Game Scene")]
+        public static void AddGameBootstrapToGameSceneMenu() =>
+            AddGameBootstrapToGameScene(silent: false);
+
+        private static bool AddGameBootstrapToGameScene(bool silent)
+        {
+            const string gameScenePath = "Assets/Scenes/Game.unity";
+
+            if (!System.IO.File.Exists(
+                    System.IO.Path.Combine(
+                        System.IO.Path.GetDirectoryName(Application.dataPath),
+                        gameScenePath)))
+            {
+                if (!silent)
+                    EditorUtility.DisplayDialog("Warcaby",
+                        $"Nie znaleziono pliku:\n{gameScenePath}\n\nStwórz scenę Game i spróbuj ponownie.", "OK");
+                return false;
+            }
+
+            // Remember current scene so we can return to it
+            var currentScene = EditorSceneManager.GetActiveScene();
+            string currentPath = currentScene.path;
+
+            // Open Game scene additively so we don't lose the current one in memory
+            var gameScene = EditorSceneManager.OpenScene(gameScenePath, OpenSceneMode.Additive);
+            EditorSceneManager.SetActiveScene(gameScene);
+
+            bool added = false;
+
+            // Find GO with GameManager
+            var gmComponent = Object.FindObjectOfType<GameManager>();
+            if (gmComponent == null)
+            {
+                // GameManager not yet placed – create a host GO for it
+                var hostGo = new GameObject("GameManager");
+                gmComponent = hostGo.AddComponent<GameManager>();
+                Undo.RegisterCreatedObjectUndo(hostGo, "Create GameManager GO");
+                Debug.Log("[MainMenuSceneSetup] Created GameManager GO in Game scene.");
+            }
+
+            var targetGo = gmComponent.gameObject;
+
+            // Add GameBootstrap if missing
+            if (targetGo.GetComponent<GameBootstrap>() == null)
+            {
+                Undo.AddComponent<GameBootstrap>(targetGo);
+                added = true;
+                Debug.Log($"[MainMenuSceneSetup] GameBootstrap added to '{targetGo.name}' in Game scene.");
+            }
+            else
+            {
+                Debug.Log("[MainMenuSceneSetup] GameBootstrap already present – skipped.");
+                added = true; // treat as success
+            }
+
+            EditorSceneManager.SaveScene(gameScene);
+
+            // Return to original scene
+            if (!string.IsNullOrEmpty(currentPath) && currentPath != gameScenePath)
+            {
+                EditorSceneManager.SetActiveScene(currentScene);
+                EditorSceneManager.CloseScene(gameScene, true);
+            }
+
+            if (!silent)
+                EditorUtility.DisplayDialog("Warcaby",
+                    added
+                        ? $"GameBootstrap przypisany do '{targetGo.name}' w scenie Game."
+                        : "GameBootstrap już istniał – brak zmian.", "OK");
+
+            return added;
         }
 
         // ═════════════════════════════════════════════════════════════════
