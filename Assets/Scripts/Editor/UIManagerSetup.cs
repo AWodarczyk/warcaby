@@ -39,13 +39,25 @@ namespace Warcaby.Editor
 
             // ── Root Canvas ───────────────────────────────────────────────
             var canvasGo = GetOrCreate("Canvas_UI", uiManagerGo.transform);
-            var canvas = canvasGo.GetOrAddComponent<Canvas>();
+
+            // Ensure RectTransform exists first (Canvas requires it)
+            if (canvasGo.GetComponent<RectTransform>() == null)
+                Undo.AddComponent<RectTransform>(canvasGo);
+
+            var canvas = canvasGo.GetComponent<Canvas>();
+            if (canvas == null)
+                canvas = Undo.AddComponent<Canvas>(canvasGo);
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 10;
-            canvasGo.GetOrAddComponent<CanvasScaler>().uiScaleMode =
-                CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
-            canvasGo.GetOrAddComponent<GraphicRaycaster>();
+
+            var scaler = canvasGo.GetComponent<CanvasScaler>();
+            if (scaler == null)
+                scaler = Undo.AddComponent<CanvasScaler>(canvasGo);
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+
+            if (canvasGo.GetComponent<GraphicRaycaster>() == null)
+                Undo.AddComponent<GraphicRaycaster>(canvasGo);
 
             // ── EventSystem (required for UI interaction) ────────────────
             if (GameObject.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
@@ -491,8 +503,12 @@ namespace Warcaby.Editor
     // ── Extension method so GetOrAddComponent stays tidy ─────────────────
     internal static class GameObjectExtensions
     {
-        public static T GetOrAddComponent<T>(this GameObject go) where T : Component =>
-            go.GetComponent<T>() ?? go.AddComponent<T>();
+        public static T GetOrAddComponent<T>(this GameObject go) where T : Component
+        {
+            var existing = go.GetComponent<T>();
+            if (existing != null) return existing;
+            return Undo.AddComponent<T>(go);
+        }
     }
 }
 #endif
