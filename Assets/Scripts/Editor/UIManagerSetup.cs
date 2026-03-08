@@ -113,10 +113,13 @@ namespace Warcaby.Editor
             so.ApplyModifiedProperties();
 
             EditorUtility.SetDirty(uiManager);
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
-                UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+            var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(activeScene);
+            // Save immediately – without SaveScene the dropdown template reference
+            // is lost when entering Play mode (MarkSceneDirty alone is not enough).
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(activeScene);
 
-            Debug.Log("[UIManagerSetup] Canvas hierarchy built and all references wired.");
+            Debug.Log("[UIManagerSetup] Canvas hierarchy built, all references wired, scene saved.");
             EditorUtility.DisplayDialog("Warcaby",
                 "UI Manager zostal skonfigurowany.\nWszystkie referencje zostaly przypisane.", "OK");
         }
@@ -201,10 +204,11 @@ namespace Warcaby.Editor
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(uiManager);
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
-                UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+            var assignScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(assignScene);
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(assignScene);
 
-            string msg = $"Przypisano {assigned} referencji do UIManager.";
+            string msg = $"Przypisano {assigned} referencji do UIManager. Scena zapisana.";
             Debug.Log($"[UIManagerSetup] {msg}");
             EditorUtility.DisplayDialog("Warcaby", msg, "OK");
         }
@@ -576,15 +580,14 @@ namespace Warcaby.Editor
             itemTmp.color    = ColorText;
             itemTmp.alignment = TextAlignmentOptions.Left;
 
-            // Wire TMP_Dropdown template references.
-            // SerializedObject approach fails when the internal field name differs between
-            // TMP versions.  Use reflection so we always hit the actual backing field,
-            // then record the object with Undo and mark it dirty so Unity serializes it.
+            // Wire TMP_Dropdown template references using both reflection (sets the backing
+            // field directly) and the public property setter (updates runtime state).
+            // SetDirty + SaveScene in SetupUIManager will flush everything to disk.
+            Undo.RecordObject(drop, "Wire dropdown template");
             SetDropdownField(drop, "m_Template",    templateRt);
             SetDropdownField(drop, "m_ItemText",    itemTmp);
             SetDropdownField(drop, "m_CaptionText", lbl);
-            Undo.RecordObject(drop, "Wire dropdown");
-            drop.template    = templateRt;   // also set via property to keep runtime state
+            drop.template    = templateRt;
             drop.itemText    = itemTmp;
             drop.captionText = lbl;
             EditorUtility.SetDirty(drop);
