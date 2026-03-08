@@ -24,17 +24,28 @@ namespace Warcaby.UI
         [SerializeField] private GameObject _blackKingPrefab;
 
         // ─── Colours ──────────────────────────────────────────────────────
-        private static readonly Color ColLightTile = new Color(0.93f, 0.84f, 0.69f);
-        private static readonly Color ColDarkTile  = new Color(0.56f, 0.35f, 0.18f);
-        private static readonly Color ColWhite     = new Color(0.95f, 0.95f, 0.92f);
-        private static readonly Color ColBlack     = new Color(0.15f, 0.12f, 0.10f);
-        private static readonly Color ColKingGold  = new Color(1.00f, 0.85f, 0.10f);
-        private static readonly Color ColSelected  = new Color(1.00f, 1.00f, 0.00f, 0.55f);
-        private static readonly Color ColMoveDot   = new Color(0.00f, 0.90f, 0.20f, 0.55f);
+        // Pitch: two shades of grass green
+        private static readonly Color ColLightTile = new Color(0.30f, 0.62f, 0.25f); // jasna trawa
+        private static readonly Color ColDarkTile  = new Color(0.22f, 0.48f, 0.18f); // ciemna trawa
+
+        // Team colours
+        private static readonly Color ColWhiteBall  = new Color(0.96f, 0.96f, 0.94f); // biała piłka
+        private static readonly Color ColWhitePatch = new Color(0.12f, 0.12f, 0.12f); // czarne łaty
+        private static readonly Color ColBlackBall  = new Color(0.90f, 0.15f, 0.15f); // czerwona drużyna
+        private static readonly Color ColBlackPatch = new Color(0.10f, 0.10f, 0.10f); // ciemne łaty
+        private static readonly Color ColKingRing   = new Color(1.00f, 0.82f, 0.05f); // złota obwódka damy
+        private static readonly Color ColKingStar   = new Color(1.00f, 0.95f, 0.40f); // złota gwiazdka
+
+        private static readonly Color ColSelected   = new Color(1.00f, 1.00f, 0.00f, 0.60f);
+        private static readonly Color ColMoveDot    = new Color(0.00f, 0.95f, 0.30f, 0.55f);
 
         // ─── Runtime ──────────────────────────────────────────────────────
         private Sprite _squareSprite;
         private Sprite _circleSprite;
+        private Sprite _whiteBallSprite;
+        private Sprite _blackBallSprite;
+        private Sprite _whiteKingSprite;
+        private Sprite _blackKingSprite;
         private readonly Dictionary<BoardPosition, GameObject> _pieces    = new();
         private readonly List<GameObject>                      _highlights = new();
         private GameManager _gm;
@@ -46,8 +57,12 @@ namespace Warcaby.UI
         private void Start()
         {
             // Generate procedural sprites once at startup
-            _squareSprite = MakeSquareSprite();
-            _circleSprite = MakeCircleSprite();
+            _squareSprite   = MakeSquareSprite();
+            _circleSprite   = MakeCircleSprite();
+            _whiteBallSprite = MakeSoccerBallSprite(ColWhiteBall, ColWhitePatch);
+            _blackBallSprite = MakeSoccerBallSprite(ColBlackBall, ColBlackPatch);
+            _whiteKingSprite = MakeSoccerBallSprite(ColWhiteBall, ColKingStar, isKing: true);
+            _blackKingSprite = MakeSoccerBallSprite(ColBlackBall, ColKingStar, isKing: true);
 
             CreateTiles();
 
@@ -86,16 +101,43 @@ namespace Warcaby.UI
                         continue;
                     }
 
-                    // Procedural fallback – always works
+                    // Procedural pitch tile – alternating row stripes on playable (dark) squares
                     var tile = new GameObject($"Tile_{r}_{c}");
                     tile.transform.SetParent(transform);
                     tile.transform.position = Cell(r, c);
                     var sr = tile.AddComponent<SpriteRenderer>();
-                    sr.sprite       = _squareSprite;
+                    sr.sprite       = dark ? MakePitchTileSprite(r) : _squareSprite;
                     sr.color        = dark ? ColDarkTile : ColLightTile;
                     sr.sortingOrder = 0;
                 }
             }
+        }
+
+        /// <summary>
+        /// Generates a tile sprite with subtle vertical "mowing stripes" for the dark
+        /// (playable) squares, alternating between two shades per row – classic stadium look.
+        /// </summary>
+        private static Sprite MakePitchTileSprite(int row)
+        {
+            const int S   = 64;
+            const int stripeW = 8; // pixels per stripe
+            bool invertStripe = (row % 2 == 0);
+
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            var px = new Color[S * S];
+            for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                int stripe = x / stripeW;
+                bool lighter = ((stripe % 2 == 0) ^ invertStripe);
+                // Slight brightness difference between stripes
+                float v = lighter ? 1.06f : 0.94f;
+                px[y * S + x] = new Color(v, v, v, 1f);
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), S);
         }
 
         private void Redraw(Board board)
@@ -156,36 +198,40 @@ namespace Warcaby.UI
             bool isWhite = type == PieceType.White     || type == PieceType.WhiteKing;
             bool isKing  = type == PieceType.WhiteKing || type == PieceType.BlackKing;
 
+            Sprite ballSprite = isKing
+                ? (isWhite ? _whiteKingSprite : _blackKingSprite)
+                : (isWhite ? _whiteBallSprite  : _blackBallSprite);
+
             var root = new GameObject();
             root.transform.position = pos;
 
-            // Body
-            var bodySR     = root.AddComponent<SpriteRenderer>();
-            bodySR.sprite  = _circleSprite;
-            bodySR.color   = isWhite ? ColWhite : ColBlack;
-            bodySR.sortingOrder = 2;
+            // Ball body
+            var sr     = root.AddComponent<SpriteRenderer>();
+            sr.sprite  = ballSprite;
+            sr.color   = Color.white;   // tint applied via sprite texture
+            sr.sortingOrder = 2;
 
-            // Dark outline ring
-            var outline = new GameObject("Outline");
-            outline.transform.SetParent(root.transform, false);
-            outline.transform.localScale = new Vector3(1.08f, 1.08f, 1f);
-            var outSR    = outline.AddComponent<SpriteRenderer>();
-            outSR.sprite = _circleSprite;
-            outSR.color  = new Color(0f, 0f, 0f, 0.45f);
-            outSR.sortingOrder = 1;
-
-            // Golden centre dot for kings
+            // Gold ring outline for kings
             if (isKing)
             {
-                var crown = new GameObject("Crown");
-                crown.transform.SetParent(root.transform, false);
-                crown.transform.localScale    = new Vector3(0.38f, 0.38f, 1f);
-                crown.transform.localPosition = new Vector3(0f, 0f, -0.1f);
-                var crSR   = crown.AddComponent<SpriteRenderer>();
-                crSR.sprite     = _circleSprite;
-                crSR.color      = ColKingGold;
-                crSR.sortingOrder = 3;
+                var ring = new GameObject("Ring");
+                ring.transform.SetParent(root.transform, false);
+                ring.transform.localScale = new Vector3(1.14f, 1.14f, 1f);
+                var ringSR     = ring.AddComponent<SpriteRenderer>();
+                ringSR.sprite  = _circleSprite;
+                ringSR.color   = ColKingRing;
+                ringSR.sortingOrder = 1;
             }
+
+            // Thin dark shadow ring for normal pieces (visual depth)
+            var shadow = new GameObject("Shadow");
+            shadow.transform.SetParent(root.transform, false);
+            shadow.transform.localScale    = new Vector3(1.06f, 1.06f, 1f);
+            shadow.transform.localPosition = new Vector3(0.03f, -0.03f, 0.1f);
+            var shadowSR   = shadow.AddComponent<SpriteRenderer>();
+            shadowSR.sprite     = _circleSprite;
+            shadowSR.color      = new Color(0f, 0f, 0f, 0.35f);
+            shadowSR.sortingOrder = 0;
 
             return root;
         }
@@ -236,6 +282,7 @@ namespace Warcaby.UI
         // Procedural sprite generators (runtime, no asset import needed)
         // ═════════════════════════════════════════════════════════════════
 
+        /// <summary>White filled square, 1 Unity unit = 1 tile (PPU = S).</summary>
         private static Sprite MakeSquareSprite()
         {
             const int S = 64;
@@ -248,6 +295,7 @@ namespace Warcaby.UI
             return Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), S);
         }
 
+        /// <summary>White anti-aliased circle filled.</summary>
         private static Sprite MakeCircleSprite()
         {
             const int S = 64;
@@ -264,6 +312,124 @@ namespace Warcaby.UI
             tex.SetPixels(px);
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), S);
+        }
+
+        /// <summary>
+        /// Soccer-ball sprite: coloured circle with 6 darker pentagon patches.
+        /// Kings get a 5-point star in the centre instead of the central patch.
+        /// </summary>
+        private static Sprite MakeSoccerBallSprite(Color ballColor, Color patchColor,
+            bool isKing = false)
+        {
+            const int S  = 128;
+            float r      = S / 2f;
+            var tex      = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            var px       = new Color[S * S];
+
+            // 1) Base circle
+            for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                float dist = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r));
+                // Smooth edge
+                float alpha = Mathf.Clamp01((r - 1f) - dist + 1.5f);
+                // Slight rim shading for 3D feel
+                float shade = Mathf.Clamp01(1f - (dist / r) * 0.25f);
+                px[y * S + x] = new Color(
+                    ballColor.r * shade,
+                    ballColor.g * shade,
+                    ballColor.b * shade,
+                    alpha);
+            }
+
+            // 2) Central patch (or star for kings)
+            if (isKing)
+            {
+                PaintStar(px, S, r, r, r * 0.28f, r * 0.13f, patchColor);
+            }
+            else
+            {
+                PaintPatch(px, S, r, r, r * 0.18f, patchColor, ballColor);
+            }
+
+            // 3) Ring of 5 patches offset from centre
+            float ringR = r * 0.46f;
+            for (int i = 0; i < 5; i++)
+            {
+                float angle = i * 72f * Mathf.Deg2Rad - Mathf.PI / 2f;
+                float cx = r + ringR * Mathf.Cos(angle);
+                float cy = r + ringR * Mathf.Sin(angle);
+                PaintPatch(px, S, cx, cy, r * 0.15f, patchColor, ballColor);
+            }
+
+            tex.SetPixels(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), S);
+        }
+
+        /// <summary>Paints a soft circular patch onto a pixel array.</summary>
+        private static void PaintPatch(Color[] px, int S, float cx, float cy,
+            float patchR, Color patch, Color ball)
+        {
+            float ballR  = S / 2f;
+            float ballCx = S / 2f, ballCy = S / 2f;
+
+            int x0 = Mathf.Max(0, (int)(cx - patchR - 2));
+            int x1 = Mathf.Min(S - 1, (int)(cx + patchR + 2));
+            int y0 = Mathf.Max(0, (int)(cy - patchR - 2));
+            int y1 = Mathf.Min(S - 1, (int)(cy + patchR + 2));
+
+            for (int y = y0; y <= y1; y++)
+            for (int x = x0; x <= x1; x++)
+            {
+                float onBall = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f),
+                                                new Vector2(ballCx, ballCy));
+                if (onBall >= ballR) continue;
+
+                float dist  = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f),
+                                               new Vector2(cx, cy));
+                float alpha = Mathf.Clamp01(patchR - dist + 0.5f);
+                if (alpha <= 0f) continue;
+
+                int idx = y * S + x;
+                px[idx] = Color.Lerp(px[idx], new Color(patch.r, patch.g, patch.b, px[idx].a), alpha);
+            }
+        }
+
+        /// <summary>Paints a 5-point star for king pieces.</summary>
+        private static void PaintStar(Color[] px, int S, float cx, float cy,
+            float outerR, float innerR, Color starColor)
+        {
+            float ballR = S / 2f;
+
+            int x0 = Mathf.Max(0, (int)(cx - outerR - 2));
+            int x1 = Mathf.Min(S - 1, (int)(cx + outerR + 2));
+            int y0 = Mathf.Max(0, (int)(cy - outerR - 2));
+            int y1 = Mathf.Min(S - 1, (int)(cy + outerR + 2));
+
+            for (int y = y0; y <= y1; y++)
+            for (int x = x0; x <= x1; x++)
+            {
+                float px2 = x + 0.5f - cx, py2 = y + 0.5f - cy;
+                float onBall = Mathf.Sqrt((x + 0.5f - S / 2f) * (x + 0.5f - S / 2f) +
+                                          (y + 0.5f - S / 2f) * (y + 0.5f - S / 2f));
+                if (onBall >= ballR) continue;
+
+                float angle = Mathf.Atan2(py2, px2);
+                float dist  = Mathf.Sqrt(px2 * px2 + py2 * py2);
+
+                // Polar equation of a 5-point star
+                float starAngle = angle / (2f * Mathf.PI) * 10f;
+                float frac      = starAngle - Mathf.Floor(starAngle);
+                float starR     = Mathf.Lerp(outerR, innerR, Mathf.Abs(frac - 0.5f) * 2f);
+
+                float alpha = Mathf.Clamp01(starR + 1f - dist);
+                if (alpha <= 0f) continue;
+
+                int idx = y * S + x;
+                px[idx] = Color.Lerp(px[idx], new Color(starColor.r, starColor.g, starColor.b, px[idx].a), alpha);
+            }
         }
     }
 }
