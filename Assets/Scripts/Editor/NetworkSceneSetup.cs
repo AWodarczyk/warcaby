@@ -99,6 +99,26 @@ namespace Warcaby.Editor
                 Debug.Log("[NetworkSceneSetup] Created CheckersNetworkManager GO.");
             }
 
+            // ── Transport (required by Mirror) ────────────────────────
+            // KcpTransport is Mirror's default UDP transport (bundled with Mirror package)
+            Transport transport = nmGo.GetComponent<Mirror.KcpTransport>();
+            if (transport == null)
+                transport = Undo.AddComponent<Mirror.KcpTransport>(nmGo);
+
+            // Assign transport to NetworkManager via SerializedObject
+            var nmSo = new SerializedObject(cnm);
+            var transportProp = nmSo.FindProperty("transport");
+            if (transportProp != null)
+            {
+                transportProp.objectReferenceValue = transport;
+                nmSo.ApplyModifiedProperties();
+                Debug.Log("[NetworkSceneSetup] KcpTransport assigned.");
+            }
+            else
+            {
+                Debug.LogWarning("[NetworkSceneSetup] Could not find 'transport' property – assign manually.");
+            }
+
             // ── Assign prefabs via SerializedObject ───────────────────
             var so = new SerializedObject(cnm);
 
@@ -137,6 +157,7 @@ namespace Warcaby.Editor
             EditorUtility.DisplayDialog("Warcaby",
                 "Konfiguracja sieciowa zakończona:\n\n" +
                 "✓ CheckersNetworkManager dodany do sceny Game\n" +
+                "✓ KcpTransport dodany i przypisany\n" +
                 "✓ NetworkPlayer prefab przypisany\n" +
                 "✓ NetworkGameManager prefab przypisany\n" +
                 "✓ Prefaby zarejestrowane jako Spawnable",
