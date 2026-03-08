@@ -45,12 +45,20 @@ namespace Warcaby
         public BoardPosition? SelectedPosition { get; private set; }
         public List<Move> LegalMoves => _legalMoves;
 
-        // ─── Unity ────────────────────────────────────────────────────────
+        // ─── Chess clock ─────────────────────────────────────────
+        public Core.ChessClock Clock { get; private set; }
+
+        // ─── Unity ────────────────────────────────────────────────
         private void Awake()
         {
             if (Instance != null) { Destroy(gameObject); return; }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+        }
+
+        private void Update()
+        {
+            Clock?.Tick(Time.deltaTime);
         }
 
         public void StartGame(GameMode mode, PlayerColor humanColor = PlayerColor.White)
@@ -68,10 +76,26 @@ namespace Warcaby
             SelectedPosition = null;
             RefreshLegalMoves();
 
+            // Chess clock
+            Clock = GameSettings.ClockSeconds > 0
+                ? new Core.ChessClock(GameSettings.ClockSeconds)
+                : null;
+            if (Clock != null)
+            {
+                Clock.OnTimeExpired += HandleTimeExpired;
+                Clock.SetActive(PlayerColor.White);
+            }
+
             OnBoardChanged?.Invoke(Board);
             OnTurnChanged?.Invoke(CurrentPlayer);
 
             if (IsAITurn()) TriggerAI();
+        }
+
+        private void HandleTimeExpired(Core.PlayerColor loser)
+        {
+            var result = loser == PlayerColor.White ? GameResult.BlackWins : GameResult.WhiteWins;
+            TriggerGameOver(result);
         }
 
         // ─── Input handling ───────────────────────────────────────────────
@@ -128,6 +152,7 @@ namespace Warcaby
             Result = GameRules.GetResult(Board, CurrentPlayer.Opponent());
             if (Result != GameResult.InProgress)
             {
+                Clock?.Stop();
                 OnGameOver?.Invoke(Result);
                 return;
             }
@@ -139,6 +164,7 @@ namespace Warcaby
         {
             CurrentPlayer = CurrentPlayer.Opponent();
             RefreshLegalMoves();
+            Clock?.SetActive(CurrentPlayer);
             OnTurnChanged?.Invoke(CurrentPlayer);
 
             if (IsAITurn()) TriggerAI();
@@ -147,6 +173,7 @@ namespace Warcaby
         /// <summary>Called externally (e.g. NetworkGameManager) to signal game over.</summary>
         public void TriggerGameOver(GameResult result)
         {
+            Clock?.Stop();
             Result = result;
             OnGameOver?.Invoke(result);
         }

@@ -39,7 +39,15 @@ namespace Warcaby.UI
         [SerializeField] private TextMeshProUGUI _turnLabel;
         [SerializeField] private TextMeshProUGUI _whitePiecesLabel;
         [SerializeField] private TextMeshProUGUI _blackPiecesLabel;
+        [SerializeField] private TextMeshProUGUI _whiteClockLabel;
+        [SerializeField] private TextMeshProUGUI _blackClockLabel;
         [SerializeField] private Button _btnResign;
+
+        [Header("Clock Selection (menu)")]
+        [SerializeField] private Button _btnClock0;
+        [SerializeField] private Button _btnClock1;
+        [SerializeField] private Button _btnClock2;
+        [SerializeField] private Button _btnClock3;
 
         [Header("Game Over")]
         [SerializeField] private TextMeshProUGUI _gameOverLabel;
@@ -55,6 +63,8 @@ namespace Warcaby.UI
         [SerializeField] private TextMeshProUGUI _toastLabel;
 
         private GameManager _gm;
+        private int _clockIndex = 0;   // 0=Brak 1=3min 2=5min 3=10min
+        private static readonly int[] ClockSeconds = { 0, 180, 300, 600 };
 
         // ─── Unity ────────────────────────────────────────────────────────
 
@@ -84,10 +94,48 @@ namespace Warcaby.UI
 
             SetAIColor(0);
             SetAIDifficulty(1);
+            SetClockTime(0);
+
+            if (_btnClock0 != null) _btnClock0.onClick.AddListener(() => SetClockTime(0));
+            if (_btnClock1 != null) _btnClock1.onClick.AddListener(() => SetClockTime(1));
+            if (_btnClock2 != null) _btnClock2.onClick.AddListener(() => SetClockTime(2));
+            if (_btnClock3 != null) _btnClock3.onClick.AddListener(() => SetClockTime(3));
 
             // Subscribe here as fallback – OnEnable fires before GameManager.Awake
             Subscribe();
             ShowMainMenu();
+        }
+
+        private void Update()
+        {
+            var clock = GameManager.Instance?.Clock;
+            if (clock == null)
+            {
+                if (_whiteClockLabel != null) _whiteClockLabel.text = "";
+                if (_blackClockLabel != null) _blackClockLabel.text = "";
+                return;
+            }
+            var gm = GameManager.Instance;
+            if (_whiteClockLabel != null)
+            {
+                _whiteClockLabel.text  = Core.ChessClock.Format(clock.WhiteRemaining);
+                _whiteClockLabel.color = ClockColor(clock.WhiteRemaining,
+                    gm.CurrentPlayer == Core.PlayerColor.White);
+            }
+            if (_blackClockLabel != null)
+            {
+                _blackClockLabel.text  = Core.ChessClock.Format(clock.BlackRemaining);
+                _blackClockLabel.color = ClockColor(clock.BlackRemaining,
+                    gm.CurrentPlayer == Core.PlayerColor.Black);
+            }
+        }
+
+        private static Color ClockColor(float remaining, bool isActive)
+        {
+            if (remaining <= 10f) return Color.red;
+            if (remaining <= 30f) return new Color(1f, 0.5f, 0f);      // orange
+            return isActive ? new Color(1f, 0.95f, 0.4f)               // gold = active
+                            : new Color(0.70f, 0.70f, 0.70f);          // gray = waiting
         }
 
         private void OnEnable()  => Subscribe();
@@ -147,6 +195,8 @@ namespace Warcaby.UI
                 };
             }
 
+            GameSettings.ClockSeconds = ClockSeconds[_clockIndex];
+
             // Ensure we're subscribed BEFORE StartGame fires OnBoardChanged/OnTurnChanged
             Subscribe();
 
@@ -181,6 +231,12 @@ namespace Warcaby.UI
                 if (img != null)
                     img.color = (i == selectedIdx) ? _colorSelected : _colorNormal;
             }
+        }
+
+        private void SetClockTime(int idx)
+        {
+            _clockIndex = idx;
+            HighlightGroup(idx, _btnClock0, _btnClock1, _btnClock2, _btnClock3);
         }
 
         // ─── Event handlers ───────────────────────────────────────────────

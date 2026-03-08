@@ -14,5 +14,8 @@ namespace Warcaby
 
         // Online
         public static string    ServerAddress { get; set; } = "localhost";
+
+        // Clock (seconds per player; 0 = no clock)
+        public static int       ClockSeconds  { get; set; } = 0;
     }
 }

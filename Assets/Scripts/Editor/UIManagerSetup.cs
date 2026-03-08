@@ -94,11 +94,17 @@ namespace Warcaby.Editor
             so.FindProperty("_btnDiffEasy").objectReferenceValue     = mainMenuPanel.btnDiffEasy;
             so.FindProperty("_btnDiffNormal").objectReferenceValue   = mainMenuPanel.btnDiffNormal;
             so.FindProperty("_btnDiffHard").objectReferenceValue     = mainMenuPanel.btnDiffHard;
+            so.FindProperty("_btnClock0").objectReferenceValue       = mainMenuPanel.btnClock0;
+            so.FindProperty("_btnClock1").objectReferenceValue       = mainMenuPanel.btnClock1;
+            so.FindProperty("_btnClock2").objectReferenceValue       = mainMenuPanel.btnClock2;
+            so.FindProperty("_btnClock3").objectReferenceValue       = mainMenuPanel.btnClock3;
 
             // In-Game HUD
             so.FindProperty("_turnLabel").objectReferenceValue           = gamePanel.turnLabel;
             so.FindProperty("_whitePiecesLabel").objectReferenceValue    = gamePanel.whitePiecesLabel;
             so.FindProperty("_blackPiecesLabel").objectReferenceValue    = gamePanel.blackPiecesLabel;
+            so.FindProperty("_whiteClockLabel").objectReferenceValue     = gamePanel.whiteClockLabel;
+            so.FindProperty("_blackClockLabel").objectReferenceValue     = gamePanel.blackClockLabel;
             so.FindProperty("_btnResign").objectReferenceValue           = gamePanel.btnResign;
 
             // Game Over
@@ -175,6 +181,10 @@ namespace Warcaby.Editor
                 assigned += AssignComp<Button>(so, "_btnDiffEasy",      mm, "AIOptions/Btn_Diff_Easy");
                 assigned += AssignComp<Button>(so, "_btnDiffNormal",    mm, "AIOptions/Btn_Diff_Normal");
                 assigned += AssignComp<Button>(so, "_btnDiffHard",      mm, "AIOptions/Btn_Diff_Hard");
+                assigned += AssignComp<Button>(so, "_btnClock0",        mm, "ClockOptions/Btn_Clock_0");
+                assigned += AssignComp<Button>(so, "_btnClock1",        mm, "ClockOptions/Btn_Clock_1");
+                assigned += AssignComp<Button>(so, "_btnClock2",        mm, "ClockOptions/Btn_Clock_2");
+                assigned += AssignComp<Button>(so, "_btnClock3",        mm, "ClockOptions/Btn_Clock_3");
             }
 
             // ── In-Game HUD ───────────────────────────────────────────────
@@ -184,6 +194,8 @@ namespace Warcaby.Editor
                 assigned += AssignComp<TextMeshProUGUI> (so, "_turnLabel",            gp, "TopBar/Label_Turn");
                 assigned += AssignComp<TextMeshProUGUI> (so, "_whitePiecesLabel",     gp, "TopBar/Label_White");
                 assigned += AssignComp<TextMeshProUGUI> (so, "_blackPiecesLabel",     gp, "TopBar/Label_Black");
+                assigned += AssignComp<TextMeshProUGUI> (so, "_whiteClockLabel",      gp, "TopBar/Label_WhiteClock");
+                assigned += AssignComp<TextMeshProUGUI> (so, "_blackClockLabel",      gp, "TopBar/Label_BlackClock");
                 assigned += AssignComp<Button>          (so, "_btnResign",            gp, "BottomBar/Btn_Resign");
             }
 
@@ -260,6 +272,7 @@ namespace Warcaby.Editor
             public Button btnPvP, btnVsAI, btnOnline;
             public Button btnAIColorWhite, btnAIColorBlack;
             public Button btnDiffEasy, btnDiffNormal, btnDiffHard;
+            public Button btnClock0, btnClock1, btnClock2, btnClock3;
         }
 
         private static MainMenuRefs BuildMainMenuPanel(Transform parent)
@@ -307,6 +320,23 @@ namespace Warcaby.Editor
             refs.btnDiffHard   = MakeButton(aiSection.transform, "Btn_Diff_Hard",  "Trudny",
                 ColorButtonNormal,  96, -33, 88, 33);
 
+            // Clock selection section
+            var clockSection = GetOrCreate("ClockOptions", t);
+            CenterRect(clockSection.GetOrAddComponent<RectTransform>(), 0, -320, 300, 90);
+            SetImage(clockSection, new Color(0, 0, 0, 0.3f));
+
+            var clockLabel = MakeText(clockSection.transform, "ClockLabel", "Czas na gracza:", 13, ColorText);
+            StretchHorizontal(clockLabel, 0, 0, 280, 22, 10);
+
+            refs.btnClock0 = MakeButton(clockSection.transform, "Btn_Clock_0", "Brak",
+                ColorButtonSuccess, -112, -28, 62, 33);
+            refs.btnClock1 = MakeButton(clockSection.transform, "Btn_Clock_1", "3 min",
+                ColorButtonNormal,   -36, -28, 62, 33);
+            refs.btnClock2 = MakeButton(clockSection.transform, "Btn_Clock_2", "5 min",
+                ColorButtonNormal,    36, -28, 62, 33);
+            refs.btnClock3 = MakeButton(clockSection.transform, "Btn_Clock_3", "10 min",
+                ColorButtonNormal,   112, -28, 62, 33);
+
             return refs;
         }
 
@@ -316,6 +346,7 @@ namespace Warcaby.Editor
         {
             public GameObject root;
             public TextMeshProUGUI turnLabel, whitePiecesLabel, blackPiecesLabel;
+            public TextMeshProUGUI whiteClockLabel, blackClockLabel;
             public Button btnResign;
         }
 
@@ -325,25 +356,33 @@ namespace Warcaby.Editor
             refs.root = BuildFullscreenPanel(parent, "Panel_Game", new Color(0, 0, 0, 0));
             var t = refs.root.transform;
 
-            // Top HUD bar
+            // Top HUD bar – taller to accommodate piece count + clock per side
             var topBar = GetOrCreate("TopBar", t);
             var topRt  = topBar.GetOrAddComponent<RectTransform>();
             topRt.anchorMin = new Vector2(0, 1); topRt.anchorMax = new Vector2(1, 1);
             topRt.pivot     = new Vector2(0.5f, 1);
-            topRt.offsetMin = new Vector2(0, -60); topRt.offsetMax = Vector2.zero;
+            topRt.offsetMin = new Vector2(0, -80); topRt.offsetMax = Vector2.zero;
             SetImage(topBar, ColorPanelBg);
 
             refs.whitePiecesLabel = MakeText(topBar.transform, "Label_White",
-                "Białe: 12", 22, ColorWhite());
-            PlaceAnchoredLeft(refs.whitePiecesLabel.rectTransform, 20, 0, 200, 50);
+                "Białe: 12", 19, ColorWhite());
+            PlaceAnchoredLeft(refs.whitePiecesLabel.rectTransform, 20, 22, 200, 28);
+
+            refs.whiteClockLabel = MakeText(topBar.transform, "Label_WhiteClock",
+                "", 22, new Color(1f, 0.95f, 0.4f));
+            PlaceAnchoredLeft(refs.whiteClockLabel.rectTransform, 20, -16, 200, 30);
 
             refs.turnLabel = MakeText(topBar.transform, "Label_Turn",
-                "Ruch: Białe", 26, ColorGold);
-            CenterRect(refs.turnLabel.rectTransform, 0, 0, 300, 50);
+                "Ruch: Białe", 24, ColorGold);
+            CenterRect(refs.turnLabel.rectTransform, 0, 0, 300, 60);
 
             refs.blackPiecesLabel = MakeText(topBar.transform, "Label_Black",
-                "Czarne: 12", 22, ColorWhite());
-            PlaceAnchoredRight(refs.blackPiecesLabel.rectTransform, 20, 0, 200, 50);
+                "Czarne: 12", 19, ColorWhite());
+            PlaceAnchoredRight(refs.blackPiecesLabel.rectTransform, 20, 22, 200, 28);
+
+            refs.blackClockLabel = MakeText(topBar.transform, "Label_BlackClock",
+                "", 22, new Color(0.70f, 0.70f, 0.70f));
+            PlaceAnchoredRight(refs.blackClockLabel.rectTransform, 20, -16, 200, 30);
 
             // Bottom bar
             var botBar = GetOrCreate("BottomBar", t);
