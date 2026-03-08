@@ -21,9 +21,19 @@ namespace Warcaby.UI
         [SerializeField] private Button _btnOnline;
 
         [Header("AI options panel")]
-        [SerializeField] private GameObject   _aiOptionsPanel;
-        [SerializeField] private TMP_Dropdown _aiColorDropdown;      // 0=Białe, 1=Czarne
-        [SerializeField] private TMP_Dropdown _aiDifficultyDropdown; // 0=Łatwy, 1=Normalny, 2=Trudny
+        [SerializeField] private GameObject _aiOptionsPanel;
+
+        [Header("AI Color (segmented)")]
+        [SerializeField] private Button _btnAIColorWhite;
+        [SerializeField] private Button _btnAIColorBlack;
+
+        [Header("AI Difficulty (segmented)")]
+        [SerializeField] private Button _btnDiffEasy;
+        [SerializeField] private Button _btnDiffNormal;
+        [SerializeField] private Button _btnDiffHard;
+
+        private int _aiColorIndex     = 0; // 0=White 1=Black
+        private int _aiDifficultyIndex = 1; // 0=Easy 1=Normal 2=Hard
 
         [Header("Online panel")]
         [SerializeField] private GameObject    _onlinePanel;
@@ -49,8 +59,14 @@ namespace Warcaby.UI
             if (_btnHost != null) _btnHost.onClick.AddListener(OnHost);
             if (_btnJoin != null) _btnJoin.onClick.AddListener(OnJoin);
 
-            if (_aiColorDropdown != null)
-                _aiColorDropdown.onValueChanged.AddListener(_ => PreviewAIOptions());
+            if (_btnAIColorWhite != null) _btnAIColorWhite.onClick.AddListener(() => SetAIColor(0));
+            if (_btnAIColorBlack != null) _btnAIColorBlack.onClick.AddListener(() => SetAIColor(1));
+            if (_btnDiffEasy    != null) _btnDiffEasy    .onClick.AddListener(() => SetAIDifficulty(0));
+            if (_btnDiffNormal  != null) _btnDiffNormal  .onClick.AddListener(() => SetAIDifficulty(1));
+            if (_btnDiffHard    != null) _btnDiffHard    .onClick.AddListener(() => SetAIDifficulty(2));
+
+            SetAIColor(0);
+            SetAIDifficulty(1);
 
             ShowMainButtons();
         }
@@ -71,9 +87,8 @@ namespace Warcaby.UI
         public void StartVsAI()
         {
             GameSettings.Mode       = GameMode.VsAI;
-            GameSettings.HumanColor = (_aiColorDropdown != null && _aiColorDropdown.value == 1)
-                                      ? PlayerColor.Black : PlayerColor.White;
-            GameSettings.AIDepth    = AIDepthFromDropdown();
+            GameSettings.HumanColor = _aiColorIndex == 1 ? PlayerColor.Black : PlayerColor.White;
+            GameSettings.AIDepth    = _aiDifficultyIndex switch { 0 => 2, 1 => 5, _ => 8 };
             LoadGameScene();
         }
 
@@ -141,20 +156,32 @@ namespace Warcaby.UI
 
         // ─── Helpers ──────────────────────────────────────────────────────
 
-        private void PreviewAIOptions()
+        // ─── AI segmented controls ────────────────────────────────────────
+
+        private static readonly Color _colorSelected = new Color(0.70f, 0.48f, 0.28f, 1f);
+        private static readonly Color _colorNormal   = new Color(0.56f, 0.35f, 0.18f, 1f);
+
+        private void SetAIColor(int idx)
         {
-            // Could update a label here in the future
+            _aiColorIndex = idx;
+            HighlightGroup(idx, _btnAIColorWhite, _btnAIColorBlack);
         }
 
-        private int AIDepthFromDropdown()
+        private void SetAIDifficulty(int idx)
         {
-            if (_aiDifficultyDropdown == null) return 5;
-            return _aiDifficultyDropdown.value switch
+            _aiDifficultyIndex = idx;
+            HighlightGroup(idx, _btnDiffEasy, _btnDiffNormal, _btnDiffHard);
+        }
+
+        private static void HighlightGroup(int selectedIdx, params Button[] btns)
+        {
+            for (int i = 0; i < btns.Length; i++)
             {
-                0 => 2,  // Łatwy
-                1 => 5,  // Normalny
-                _ => 8   // Trudny
-            };
+                if (btns[i] == null) continue;
+                var img = btns[i].GetComponent<Image>();
+                if (img != null)
+                    img.color = (i == selectedIdx) ? _colorSelected : _colorNormal;
+            }
         }
 
         private static void LoadGameScene()

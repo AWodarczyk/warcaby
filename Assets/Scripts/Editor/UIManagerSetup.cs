@@ -84,12 +84,16 @@ namespace Warcaby.Editor
             so.FindProperty("_gameOverPanel").objectReferenceValue = gameOverPanel.root;
             so.FindProperty("_onlinePanel").objectReferenceValue   = onlinePanel.root;
 
-            // Main Menu buttons & dropdowns
-            so.FindProperty("_btnPvP").objectReferenceValue              = mainMenuPanel.btnPvP;
-            so.FindProperty("_btnVsAI").objectReferenceValue             = mainMenuPanel.btnVsAI;
-            so.FindProperty("_btnOnline").objectReferenceValue           = mainMenuPanel.btnOnline;
-            so.FindProperty("_aiColorDropdown").objectReferenceValue     = mainMenuPanel.aiColorDropdown;
-            so.FindProperty("_aiDifficultyDropdown").objectReferenceValue= mainMenuPanel.aiDifficultyDropdown;
+            // Main Menu buttons
+            so.FindProperty("_btnPvP").objectReferenceValue          = mainMenuPanel.btnPvP;
+            so.FindProperty("_btnVsAI").objectReferenceValue         = mainMenuPanel.btnVsAI;
+            so.FindProperty("_btnOnline").objectReferenceValue       = mainMenuPanel.btnOnline;
+            // AI segmented controls
+            so.FindProperty("_btnAIColorWhite").objectReferenceValue = mainMenuPanel.btnAIColorWhite;
+            so.FindProperty("_btnAIColorBlack").objectReferenceValue = mainMenuPanel.btnAIColorBlack;
+            so.FindProperty("_btnDiffEasy").objectReferenceValue     = mainMenuPanel.btnDiffEasy;
+            so.FindProperty("_btnDiffNormal").objectReferenceValue   = mainMenuPanel.btnDiffNormal;
+            so.FindProperty("_btnDiffHard").objectReferenceValue     = mainMenuPanel.btnDiffHard;
 
             // In-Game HUD
             so.FindProperty("_turnLabel").objectReferenceValue           = gamePanel.turnLabel;
@@ -163,11 +167,14 @@ namespace Warcaby.Editor
             var mm = canvasT.Find("Panel_MainMenu");
             if (mm != null)
             {
-                assigned += AssignComp<Button>          (so, "_btnPvP",               mm, "Btn_PvP");
-                assigned += AssignComp<Button>          (so, "_btnVsAI",              mm, "Btn_VsAI");
-                assigned += AssignComp<Button>          (so, "_btnOnline",            mm, "Btn_Online");
-                assigned += AssignComp<TMP_Dropdown>    (so, "_aiColorDropdown",      mm, "AIOptions/Dropdown_AIColor");
-                assigned += AssignComp<TMP_Dropdown>    (so, "_aiDifficultyDropdown", mm, "AIOptions/Dropdown_AIDiff");
+                assigned += AssignComp<Button>(so, "_btnPvP",           mm, "Btn_PvP");
+                assigned += AssignComp<Button>(so, "_btnVsAI",          mm, "Btn_VsAI");
+                assigned += AssignComp<Button>(so, "_btnOnline",        mm, "Btn_Online");
+                assigned += AssignComp<Button>(so, "_btnAIColorWhite",  mm, "AIOptions/Btn_AIColor_White");
+                assigned += AssignComp<Button>(so, "_btnAIColorBlack",  mm, "AIOptions/Btn_AIColor_Black");
+                assigned += AssignComp<Button>(so, "_btnDiffEasy",      mm, "AIOptions/Btn_Diff_Easy");
+                assigned += AssignComp<Button>(so, "_btnDiffNormal",    mm, "AIOptions/Btn_Diff_Normal");
+                assigned += AssignComp<Button>(so, "_btnDiffHard",      mm, "AIOptions/Btn_Diff_Hard");
             }
 
             // ── In-Game HUD ───────────────────────────────────────────────
@@ -251,7 +258,8 @@ namespace Warcaby.Editor
         {
             public GameObject root;
             public Button btnPvP, btnVsAI, btnOnline;
-            public TMP_Dropdown aiColorDropdown, aiDifficultyDropdown;
+            public Button btnAIColorWhite, btnAIColorBlack;
+            public Button btnDiffEasy, btnDiffNormal, btnDiffHard;
         }
 
         private static MainMenuRefs BuildMainMenuPanel(Transform parent)
@@ -271,16 +279,33 @@ namespace Warcaby.Editor
 
             // AI options section
             var aiSection = GetOrCreate("AIOptions", t);
-            CenterRect(aiSection.GetOrAddComponent<RectTransform>(), 0, -140, 300, 130);
+            CenterRect(aiSection.GetOrAddComponent<RectTransform>(), 0, -155, 300, 145);
             SetImage(aiSection, new Color(0, 0, 0, 0.3f));
 
             var aiLabel = MakeText(aiSection.transform, "AILabel", "Ustawienia AI", 18, ColorText);
-            StretchHorizontal(aiLabel, 0, 0, 134, 30, 10);
+            StretchHorizontal(aiLabel, 0, 0, 145, 30, 10);
 
-            refs.aiColorDropdown     = MakeDropdown(aiSection.transform, "Dropdown_AIColor",
-                "Kolor gracza", new[] { "Białe", "Czarne" }, 0, 82, 260, 35);
-            refs.aiDifficultyDropdown= MakeDropdown(aiSection.transform, "Dropdown_AIDiff",
-                "Trudność AI",  new[] { "Łatwy", "Normalny", "Trudny" }, 0, 40, 260, 35);
+            // Color row header
+            var colorLabel = MakeText(aiSection.transform, "ColorLabel", "Kolor gracza:", 13, ColorText);
+            StretchHorizontal(colorLabel, 0, 0, 115, 22, 50);
+
+            // Color segmented: [Białe] [Czarne]
+            refs.btnAIColorWhite = MakeButton(aiSection.transform, "Btn_AIColor_White", "Białe",
+                ColorButtonNormal, -67, 10, 128, 33);
+            refs.btnAIColorBlack = MakeButton(aiSection.transform, "Btn_AIColor_Black", "Czarne",
+                ColorButtonNormal,  67, 10, 128, 33);
+
+            // Difficulty row header
+            var diffLabel = MakeText(aiSection.transform, "DiffLabel", "Trudność:", 13, ColorText);
+            StretchHorizontal(diffLabel, 0, 0, 115, 22, 93);
+
+            // Difficulty segmented: [Łatwy] [Normalny] [Trudny]
+            refs.btnDiffEasy   = MakeButton(aiSection.transform, "Btn_Diff_Easy",   "Łatwy",
+                ColorButtonNormal, -96, -33, 88, 33);
+            refs.btnDiffNormal = MakeButton(aiSection.transform, "Btn_Diff_Normal", "Normalny",
+                ColorButtonSuccess,  0, -33, 88, 33);
+            refs.btnDiffHard   = MakeButton(aiSection.transform, "Btn_Diff_Hard",  "Trudny",
+                ColorButtonNormal,  96, -33, 88, 33);
 
             return refs;
         }

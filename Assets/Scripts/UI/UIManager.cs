@@ -22,8 +22,18 @@ namespace Warcaby.UI
         [SerializeField] private Button _btnPvP;
         [SerializeField] private Button _btnVsAI;
         [SerializeField] private Button _btnOnline;
-        [SerializeField] private TMP_Dropdown _aiColorDropdown;
-        [SerializeField] private TMP_Dropdown _aiDifficultyDropdown;
+
+        [Header("AI Color (segmented)")]
+        [SerializeField] private Button _btnAIColorWhite;
+        [SerializeField] private Button _btnAIColorBlack;
+
+        [Header("AI Difficulty (segmented)")]
+        [SerializeField] private Button _btnDiffEasy;
+        [SerializeField] private Button _btnDiffNormal;
+        [SerializeField] private Button _btnDiffHard;
+
+        private int _aiColorIndex     = 0; // 0=White 1=Black
+        private int _aiDifficultyIndex = 1; // 0=Easy 1=Normal 2=Hard
 
         [Header("In-Game HUD")]
         [SerializeField] private TextMeshProUGUI _turnLabel;
@@ -64,6 +74,16 @@ namespace Warcaby.UI
             _btnMainMenu.onClick.AddListener(ShowMainMenu);
             _btnHost.onClick.AddListener(OnHost);
             _btnJoin.onClick.AddListener(OnJoin);
+
+            // AI segmented controls
+            if (_btnAIColorWhite  != null) _btnAIColorWhite .onClick.AddListener(() => SetAIColor(0));
+            if (_btnAIColorBlack  != null) _btnAIColorBlack .onClick.AddListener(() => SetAIColor(1));
+            if (_btnDiffEasy      != null) _btnDiffEasy     .onClick.AddListener(() => SetAIDifficulty(0));
+            if (_btnDiffNormal    != null) _btnDiffNormal   .onClick.AddListener(() => SetAIDifficulty(1));
+            if (_btnDiffHard      != null) _btnDiffHard     .onClick.AddListener(() => SetAIDifficulty(2));
+
+            SetAIColor(0);
+            SetAIDifficulty(1);
 
             ShowMainMenu();
         }
@@ -112,19 +132,46 @@ namespace Warcaby.UI
             PlayerColor humanColor = PlayerColor.White;
             if (mode == GameMode.VsAI)
             {
-                humanColor = _aiColorDropdown.value == 0 ? PlayerColor.White : PlayerColor.Black;
-                int depth = _aiDifficultyDropdown.value switch
+                humanColor = _aiColorIndex == 0 ? PlayerColor.White : PlayerColor.Black;
+                GameSettings.AIDepth = _aiDifficultyIndex switch
                 {
                     0 => 2,
                     1 => 5,
                     _ => 8
                 };
-                // GameManager exposes AI depth via a property or method
             }
 
             GameManager.Instance.StartGame(mode, humanColor);
             SetActivePanel(_gamePanel);
             UpdateHUD();
+        }
+
+        // ─── AI segmented controls ────────────────────────────────────────
+
+        private static readonly Color _colorSelected = new Color(0.70f, 0.48f, 0.28f, 1f);
+        private static readonly Color _colorNormal   = new Color(0.56f, 0.35f, 0.18f, 1f);
+
+        private void SetAIColor(int idx)
+        {
+            _aiColorIndex = idx;
+            HighlightGroup(idx, _btnAIColorWhite, _btnAIColorBlack);
+        }
+
+        private void SetAIDifficulty(int idx)
+        {
+            _aiDifficultyIndex = idx;
+            HighlightGroup(idx, _btnDiffEasy, _btnDiffNormal, _btnDiffHard);
+        }
+
+        private static void HighlightGroup(int selectedIdx, params Button[] btns)
+        {
+            for (int i = 0; i < btns.Length; i++)
+            {
+                if (btns[i] == null) continue;
+                var img = btns[i].GetComponent<Image>();
+                if (img != null)
+                    img.color = (i == selectedIdx) ? _colorSelected : _colorNormal;
+            }
         }
 
         // ─── Event handlers ───────────────────────────────────────────────

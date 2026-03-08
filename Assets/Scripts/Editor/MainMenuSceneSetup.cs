@@ -104,17 +104,25 @@ namespace Warcaby.Editor
             CreateText("Title_AI", aiT, "Ustawienia AI", 36, ColorGold,
                 new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(340, 50));
 
-            var labelColor = CreateText("Label_Color", aiT, "Twój kolor:", 20, ColorText,
-                new Vector2(0.5f, 1f), new Vector2(0, -105), new Vector2(300, 30));
+            CreateText("Label_Color", aiT, "Twój kolor:", 20, ColorText,
+                new Vector2(0.5f, 1f), new Vector2(0, -100), new Vector2(300, 28));
 
-            var aiColorDrop = CreateDropdown("DD_Color", aiT,
-                new[] { "Białe (ruszają pierwsze)", "Czarne" }, 0, -145, 300, 44);
+            // Color segmented: [Białe] [Czarne]
+            var btnAIColorWhite = CreateButton("Btn_AIColor_White", aiT, "Białe",
+                ColorButtonNormal, -76, -148, 142, 44);
+            var btnAIColorBlack = CreateButton("Btn_AIColor_Black", aiT, "Czarne",
+                ColorButtonNormal,  76, -148, 142, 44);
 
-            var labelDiff = CreateText("Label_Diff", aiT, "Trudność:", 20, ColorText,
-                new Vector2(0.5f, 1f), new Vector2(0, -210), new Vector2(300, 30));
+            CreateText("Label_Diff", aiT, "Trudność:", 20, ColorText,
+                new Vector2(0.5f, 1f), new Vector2(0, -210), new Vector2(300, 28));
 
-            var aiDiffDrop = CreateDropdown("DD_Diff", aiT,
-                new[] { "Łatwy", "Normalny", "Trudny" }, 0, -250, 300, 44);
+            // Difficulty segmented: [Łatwy] [Normalny] [Trudny]
+            var btnDiffEasy   = CreateButton("Btn_Diff_Easy",   aiT, "Łatwy",
+                ColorButtonNormal,   -100, -258, 92, 44);
+            var btnDiffNormal = CreateButton("Btn_Diff_Normal", aiT, "Normalny",
+                ColorButtonSuccess,     0, -258, 92, 44);
+            var btnDiffHard   = CreateButton("Btn_Diff_Hard",   aiT, "Trudny",
+                ColorButtonNormal,    100, -258, 92, 44);
 
             var btnStartAI = CreateButton("Btn_StartAI", aiT, "Graj!", ColorButtonSuccess, 0, -330, 220, 58);
             var btnBackAI  = CreateButton("Btn_BackAI",  aiT, "← Wstecz", ColorButtonDanger, 0, -395, 160, 42);
@@ -146,18 +154,21 @@ namespace Warcaby.Editor
 
             // ── Wire MainMenuManager fields ───────────────────────────
             var so = new SerializedObject(mmm);
-            so.FindProperty("_btnPvP")              .objectReferenceValue = btnPvP;
-            so.FindProperty("_btnVsAI")             .objectReferenceValue = btnVsAI;
-            so.FindProperty("_btnOnline")           .objectReferenceValue = btnOnline;
-            so.FindProperty("_aiOptionsPanel")      .objectReferenceValue = aiPanel;
-            so.FindProperty("_aiColorDropdown")     .objectReferenceValue = aiColorDrop;
-            so.FindProperty("_aiDifficultyDropdown").objectReferenceValue = aiDiffDrop;
-            so.FindProperty("_onlinePanel")         .objectReferenceValue = onlinePanel;
-            so.FindProperty("_serverAddressInput")  .objectReferenceValue = serverInput;
-            so.FindProperty("_btnHost")             .objectReferenceValue = btnHost;
-            so.FindProperty("_btnJoin")             .objectReferenceValue = btnJoin;
-            so.FindProperty("_btnBack")             .objectReferenceValue = btnBackAI;  // shared Back wire
-            so.FindProperty("_btnQuit")             .objectReferenceValue = btnQuit;
+            so.FindProperty("_btnPvP")             .objectReferenceValue = btnPvP;
+            so.FindProperty("_btnVsAI")            .objectReferenceValue = btnVsAI;
+            so.FindProperty("_btnOnline")          .objectReferenceValue = btnOnline;
+            so.FindProperty("_aiOptionsPanel")     .objectReferenceValue = aiPanel;
+            so.FindProperty("_btnAIColorWhite")    .objectReferenceValue = btnAIColorWhite;
+            so.FindProperty("_btnAIColorBlack")    .objectReferenceValue = btnAIColorBlack;
+            so.FindProperty("_btnDiffEasy")        .objectReferenceValue = btnDiffEasy;
+            so.FindProperty("_btnDiffNormal")      .objectReferenceValue = btnDiffNormal;
+            so.FindProperty("_btnDiffHard")        .objectReferenceValue = btnDiffHard;
+            so.FindProperty("_onlinePanel")        .objectReferenceValue = onlinePanel;
+            so.FindProperty("_serverAddressInput") .objectReferenceValue = serverInput;
+            so.FindProperty("_btnHost")            .objectReferenceValue = btnHost;
+            so.FindProperty("_btnJoin")            .objectReferenceValue = btnJoin;
+            so.FindProperty("_btnBack")            .objectReferenceValue = btnBackAI;
+            so.FindProperty("_btnQuit")            .objectReferenceValue = btnQuit;
             so.ApplyModifiedProperties();
 
             // Start AI button – calls StartVsAI() directly
