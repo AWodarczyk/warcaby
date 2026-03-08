@@ -576,9 +576,15 @@ namespace Warcaby.Editor
             itemTmp.color    = ColorText;
             itemTmp.alignment = TextAlignmentOptions.Left;
 
-            // Wire TMP_Dropdown template references
-            drop.template  = templateRt;
-            drop.itemText  = itemTmp;
+            // Wire TMP_Dropdown template references via SerializedObject so Unity
+            // actually serializes (persists) them to the scene file.
+            // Direct property assignment (drop.template = ...) is NOT saved by the Editor.
+            var dropSO = new SerializedObject(drop);
+            dropSO.FindProperty("m_Template").objectReferenceValue  = templateRt;
+            dropSO.FindProperty("m_ItemText").objectReferenceValue  = itemTmp;
+            dropSO.FindProperty("m_CaptionText").objectReferenceValue = lbl;
+            dropSO.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(drop);
 
             // Template must be inactive at runtime (TMP_Dropdown activates it on Show())
             templateGo.SetActive(false);
