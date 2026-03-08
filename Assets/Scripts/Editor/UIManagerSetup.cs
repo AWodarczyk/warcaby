@@ -601,7 +601,9 @@ namespace Warcaby.Editor
         {
             var existing = parent.Find(name);
             if (existing != null) return existing.gameObject;
-            var go = new GameObject(name);
+            // Create with RectTransform from the start – UI GameObjects require it
+            // and AddComponent<RectTransform> fails when a plain Transform already exists.
+            var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
             return go;
         }
