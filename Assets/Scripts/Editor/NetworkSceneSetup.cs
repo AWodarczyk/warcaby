@@ -99,23 +99,50 @@ namespace Warcaby.Editor
             }
 
             // ── Transport (required by Mirror) ────────────────────────
-            // KcpTransport is Mirror's default UDP transport (bundled with Mirror package)
-            Transport transport = nmGo.GetComponent<Mirror.KcpTransport>();
+            // KcpTransport lives in the global namespace (not Mirror.*).
+            // Use reflection so we don't need a hard assembly reference.
+            Transport transport = nmGo.GetComponent<Transport>();
             if (transport == null)
-                transport = nmGo.AddComponent<Mirror.KcpTransport>();
+            {
+                // Try known transport type names in order of preference
+                string[] transportTypeNames = { "kcp2k.KcpTransport", "KcpTransport", "Mirror.TelepathyTransport" };
+                System.Type transportType = null;
+                foreach (var typeName in transportTypeNames)
+                {
+                    foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        transportType = asm.GetType(typeName);
+                        if (transportType != null) break;
+                    }
+                    if (transportType != null) break;
+                }
+
+                if (transportType != null)
+                {
+                    transport = (Transport)nmGo.AddComponent(transportType);
+                    Debug.Log($"[NetworkSceneSetup] Added transport: {transportType.FullName}");
+                }
+                else
+                {
+                    Debug.LogWarning("[NetworkSceneSetup] No transport type found. Add a Transport component manually to the NetworkManager GO.");
+                }
+            }
 
             // Assign transport to NetworkManager via SerializedObject
-            var nmSo = new SerializedObject(cnm);
-            var transportProp = nmSo.FindProperty("transport");
-            if (transportProp != null)
+            if (transport != null)
             {
-                transportProp.objectReferenceValue = transport;
-                nmSo.ApplyModifiedProperties();
-                Debug.Log("[NetworkSceneSetup] KcpTransport assigned.");
-            }
-            else
-            {
-                Debug.LogWarning("[NetworkSceneSetup] Could not find 'transport' property – assign manually.");
+                var nmSo = new SerializedObject(cnm);
+                var transportProp = nmSo.FindProperty("transport");
+                if (transportProp != null)
+                {
+                    transportProp.objectReferenceValue = transport;
+                    nmSo.ApplyModifiedProperties();
+                    Debug.Log("[NetworkSceneSetup] Transport assigned.");
+                }
+                else
+                {
+                    Debug.LogWarning("[NetworkSceneSetup] Could not find 'transport' property – assign manually.");
+                }
             }
 
             // ── Assign prefabs via SerializedObject ───────────────────
