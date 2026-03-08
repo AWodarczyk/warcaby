@@ -315,27 +315,28 @@ namespace Warcaby.UI
         }
 
         /// <summary>
-        /// Soccer-ball sprite: coloured circle with 6 darker pentagon patches.
-        /// Kings get a 5-point star in the centre instead of the central patch.
+        /// Soccer-ball sprite: coloured circle with 1 large central pentagon + ring of 5 pentagons.
+        /// Kings get a 5-point star in the centre.
         /// </summary>
         private static Sprite MakeSoccerBallSprite(Color ballColor, Color patchColor,
             bool isKing = false)
         {
-            const int S  = 128;
-            float r      = S / 2f;
-            var tex      = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            const int S = 256;
+            float r     = S / 2f;
+            var tex     = new Texture2D(S, S, TextureFormat.RGBA32, false);
             tex.filterMode = FilterMode.Bilinear;
-            var px       = new Color[S * S];
+            var px      = new Color[S * S];
 
-            // 1) Base circle
+            // 1) Base circle with subtle 3-D shading
             for (int y = 0; y < S; y++)
             for (int x = 0; x < S; x++)
             {
-                float dist = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r));
-                // Smooth edge
-                float alpha = Mathf.Clamp01((r - 1f) - dist + 1.5f);
-                // Slight rim shading for 3D feel
-                float shade = Mathf.Clamp01(1f - (dist / r) * 0.25f);
+                float dx   = x + 0.5f - r, dy = y + 0.5f - r;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float alpha = Mathf.Clamp01((r - 1.5f) - dist + 2f);
+                // highlight top-left, shadow bottom-right
+                float shade = Mathf.Clamp01(1.08f - (dist / r) * 0.30f
+                              + (-dx - dy) / (r * 3.5f));
                 px[y * S + x] = new Color(
                     ballColor.r * shade,
                     ballColor.g * shade,
@@ -343,24 +344,27 @@ namespace Warcaby.UI
                     alpha);
             }
 
-            // 2) Central patch (or star for kings)
+            // 2) Central patch or star for kings
             if (isKing)
             {
-                PaintStar(px, S, r, r, r * 0.28f, r * 0.13f, patchColor);
+                PaintStar(px, S, r, r, r * 0.32f, r * 0.14f, patchColor);
             }
             else
             {
-                PaintPatch(px, S, r, r, r * 0.18f, patchColor, ballColor);
+                // Pentagon shape at centre (5 sides, hard-ish edge)
+                PaintPentagon(px, S, r, r, r * 0.30f, 0f, patchColor);
             }
 
-            // 3) Ring of 5 patches offset from centre
-            float ringR = r * 0.46f;
+            // 3) Ring of 5 pentagons, each rotated so a flat side faces the centre
+            float ringR = r * 0.56f;
             for (int i = 0; i < 5; i++)
             {
                 float angle = i * 72f * Mathf.Deg2Rad - Mathf.PI / 2f;
-                float cx = r + ringR * Mathf.Cos(angle);
-                float cy = r + ringR * Mathf.Sin(angle);
-                PaintPatch(px, S, cx, cy, r * 0.15f, patchColor, ballColor);
+                float cx    = r + ringR * Mathf.Cos(angle);
+                float cy    = r + ringR * Mathf.Sin(angle);
+                // rotate each pentagon so it follows the ball curvature
+                float rot   = angle + Mathf.PI; // point outward
+                PaintPentagon(px, S, cx, cy, r * 0.24f, rot, patchColor);
             }
 
             tex.SetPixels(px);
@@ -368,32 +372,56 @@ namespace Warcaby.UI
             return Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), S);
         }
 
-        /// <summary>Paints a soft circular patch onto a pixel array.</summary>
-        private static void PaintPatch(Color[] px, int S, float cx, float cy,
-            float patchR, Color patch, Color ball)
+        /// <summary>Paints a filled regular pentagon patch (pixel-by-pixel convex test).</summary>
+        private static void PaintPentagon(Color[] px, int S, float cx, float cy,
+            float size, float rotOffset, Color patchCol)
         {
             float ballR  = S / 2f;
             float ballCx = S / 2f, ballCy = S / 2f;
 
-            int x0 = Mathf.Max(0, (int)(cx - patchR - 2));
-            int x1 = Mathf.Min(S - 1, (int)(cx + patchR + 2));
-            int y0 = Mathf.Max(0, (int)(cy - patchR - 2));
-            int y1 = Mathf.Min(S - 1, (int)(cy + patchR + 2));
+            // Apothem = distance from centre to each edge midpoint
+            float apothem = size * Mathf.Cos(Mathf.PI / 5f);
 
+            // 5 outward edge normals
+            const int N = 5;
+            var normals = new Vector2[N];
+            for (int i = 0; i < N; i++)
+            {
+                float a    = rotOffset + i * (2f * Mathf.PI / N);
+                normals[i] = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+            }
+
+            int x0 = Mathf.Max(0, (int)(cx - size - 2));
+            int x1 = Mathf.Min(S - 1, (int)(cx + size + 2));
+            int y0 = Mathf.Max(0, (int)(cy - size - 2));
+            int y1 = Mathf.Min(S - 1, (int)(cy + size + 2));
+
+            const float feather = 2f;
             for (int y = y0; y <= y1; y++)
             for (int x = x0; x <= x1; x++)
             {
-                float onBall = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f),
-                                                new Vector2(ballCx, ballCy));
-                if (onBall >= ballR) continue;
+                // Must be within the ball circle
+                float bdx = x + 0.5f - ballCx, bdy = y + 0.5f - ballCy;
+                if (bdx * bdx + bdy * bdy >= ballR * ballR) continue;
 
-                float dist  = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f),
-                                               new Vector2(cx, cy));
-                float alpha = Mathf.Clamp01(patchR - dist + 0.5f);
+                float lx = x + 0.5f - cx, ly = y + 0.5f - cy;
+
+                // For a convex polygon: signed dist = max over all edges of
+                // (dot(p, n) - apothem).  Negative = inside, positive = outside.
+                float maxDist = float.MinValue;
+                for (int i = 0; i < N; i++)
+                {
+                    float d = lx * normals[i].x + ly * normals[i].y - apothem;
+                    if (d > maxDist) maxDist = d;
+                }
+
+                float alpha = Mathf.Clamp01((-maxDist + feather) / feather);
                 if (alpha <= 0f) continue;
 
                 int idx = y * S + x;
-                px[idx] = Color.Lerp(px[idx], new Color(patch.r, patch.g, patch.b, px[idx].a), alpha);
+                px[idx] = Color.Lerp(px[idx],
+                    new Color(patchCol.r, patchCol.g, patchCol.b, px[idx].a),
+                    alpha * 0.90f);
             }
         }
 
