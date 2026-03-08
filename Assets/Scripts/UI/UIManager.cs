@@ -119,10 +119,10 @@ namespace Warcaby.UI
 
         private void SetActivePanel(GameObject active)
         {
-            _mainMenuPanel.SetActive(active == _mainMenuPanel);
-            _gamePanel.SetActive(active == _gamePanel);
-            _gameOverPanel.SetActive(active == _gameOverPanel);
-            _onlinePanel.SetActive(active == _onlinePanel);
+            _mainMenuPanel?.SetActive(active == _mainMenuPanel);
+            _gamePanel?.SetActive(active == _gamePanel);
+            _gameOverPanel?.SetActive(active == _gameOverPanel);
+            _onlinePanel?.SetActive(active == _onlinePanel);
         }
 
         // ─── Game start ───────────────────────────────────────────────────
@@ -176,32 +176,35 @@ namespace Warcaby.UI
 
         // ─── Event handlers ───────────────────────────────────────────────
 
-        private void HandleBoardChanged(Board board) => UpdateHUD();
+        private void HandleBoardChanged(Board board) => UpdateHUD(board);
 
         private void HandleTurnChanged(PlayerColor player)
         {
             string name = player == PlayerColor.White ? "Białe" : "Czarne";
-            _turnLabel.text = $"Ruch: {name}";
+            if (_turnLabel != null) _turnLabel.text = $"Ruch: {name}";
         }
 
         private void HandleGameOver(GameResult result)
         {
-            _gameOverLabel.text = result switch
+            string msg = result switch
             {
                 GameResult.WhiteWins => "Białe wygrywają!",
                 GameResult.BlackWins => "Czarne wygrywają!",
                 GameResult.Draw      => "Remis!",
                 _                    => ""
             };
+            if (_gameOverLabel != null) _gameOverLabel.text = msg;
             SetActivePanel(_gameOverPanel);
         }
 
-        private void UpdateHUD()
+        private void UpdateHUD(Board board = null)
         {
-            if (GameManager.Instance == null) return;
-            var board = GameManager.Instance.Board;
-            _whitePiecesLabel.text = $"Białe: {board.WhitePieces}";
-            _blackPiecesLabel.text = $"Czarne: {board.BlackPieces}";
+            board ??= GameManager.Instance?.Board;
+            if (board == null) return;
+            int w = board.WhitePieces;
+            int b = board.BlackPieces;
+            if (_whitePiecesLabel != null) _whitePiecesLabel.text = $"Białe: {w}";
+            if (_blackPiecesLabel != null) _blackPiecesLabel.text = $"Czarne: {b}";
         }
 
         private void OnResign()

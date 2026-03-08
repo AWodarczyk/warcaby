@@ -11,12 +11,30 @@ namespace Warcaby.Core
         public const int Size = 8;
         private readonly PieceType[,] _cells = new PieceType[Size, Size];
 
-        // Piece counts (cached for performance)
-        private int _whitePieces;
-        private int _blackPieces;
+        // Piece counts – computed on demand from _cells (no cache to go out of sync)
+        public int WhitePieces
+        {
+            get
+            {
+                int n = 0;
+                for (int r = 0; r < Size; r++)
+                    for (int c = 0; c < Size; c++)
+                        if (_cells[r, c].IsWhite()) n++;
+                return n;
+            }
+        }
 
-        public int WhitePieces => _whitePieces;
-        public int BlackPieces => _blackPieces;
+        public int BlackPieces
+        {
+            get
+            {
+                int n = 0;
+                for (int r = 0; r < Size; r++)
+                    for (int c = 0; c < Size; c++)
+                        if (_cells[r, c].IsBlack()) n++;
+                return n;
+            }
+        }
 
         // ─── Constructors ──────────────────────────────────────────────────
 
@@ -25,8 +43,6 @@ namespace Warcaby.Core
         private Board(Board source)
         {
             Array.Copy(source._cells, _cells, _cells.Length);
-            _whitePieces = source._whitePieces;
-            _blackPieces = source._blackPieces;
         }
 
         // ─── Factory ───────────────────────────────────────────────────────
@@ -44,7 +60,6 @@ namespace Warcaby.Core
                     if (IsPlayableSquare(row, col))
                     {
                         board._cells[row, col] = PieceType.Black;
-                        board._blackPieces++;
                     }
                 }
             }
@@ -57,7 +72,6 @@ namespace Warcaby.Core
                     if (IsPlayableSquare(row, col))
                     {
                         board._cells[row, col] = PieceType.White;
-                        board._whitePieces++;
                     }
                 }
             }
@@ -74,14 +88,7 @@ namespace Warcaby.Core
 
         public void SetPiece(BoardPosition pos, PieceType type)
         {
-            var old = _cells[pos.Row, pos.Col];
-            if (old.IsWhite()) _whitePieces--;
-            else if (old.IsBlack()) _blackPieces--;
-
             _cells[pos.Row, pos.Col] = type;
-
-            if (type.IsWhite()) _whitePieces++;
-            else if (type.IsBlack()) _blackPieces++;
         }
 
         public bool IsEmpty(BoardPosition pos) => _cells[pos.Row, pos.Col] == PieceType.None;
