@@ -14,13 +14,14 @@ namespace Warcaby.Input
     {
         private Camera _cam;
         private Network.NetworkPlayer _localNetworkPlayer;
+        private BoardRenderer _boardRenderer;
 
         private void Awake() => _cam = GetComponent<Camera>();
 
         private void Start()
         {
-            // Cache the local network player if in online mode
             _localNetworkPlayer = FindLocalNetworkPlayer();
+            _boardRenderer = FindObjectOfType<BoardRenderer>();
         }
 
         private void Update()
@@ -28,6 +29,7 @@ namespace Warcaby.Input
             if (!UnityEngine.Input.GetMouseButtonDown(0)) return;
             if (GameManager.Instance == null) return;
             if (GameManager.Instance.Result != GameResult.InProgress) return;
+            if (_boardRenderer != null && _boardRenderer.IsAnimating) return;  // block during animation
 
             var worldPos = _cam.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
             worldPos.z = 0;

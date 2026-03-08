@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Warcaby.Core;
@@ -50,6 +51,12 @@ namespace Warcaby.UI
         private readonly List<GameObject>                      _highlights = new();
         private GameManager _gm;
 
+        // ─── Animation state ──────────────────────────────────────────────
+        public  bool  IsAnimating  => _animating;
+        private bool  _animating;
+        private Board _pendingBoard;
+        private const float AnimDuration = 0.30f;
+
         // ═════════════════════════════════════════════════════════════════
         // Unity lifecycle
         // ═════════════════════════════════════════════════════════════════
@@ -68,7 +75,8 @@ namespace Warcaby.UI
 
             _gm = GameManager.Instance;
             if (_gm == null) { Debug.LogError("[BoardRenderer] GameManager not found!"); return; }
-            _gm.OnBoardChanged += Redraw;
+            _gm.OnBoardChanged += OnBoardChanged;
+            _gm.OnMoveMade     += OnMoveMade;
 
             // GameBootstrap.Start() may have fired before us – redraw immediately if board exists.
             if (_gm.Board != null)
@@ -77,7 +85,87 @@ namespace Warcaby.UI
 
         private void OnDestroy()
         {
-            if (_gm != null) _gm.OnBoardChanged -= Redraw;
+            if (_gm == null) return;
+            _gm.OnBoardChanged -= OnBoardChanged;
+            _gm.OnMoveMade     -= OnMoveMade;
+        }
+
+        // ─── Event handlers ───────────────────────────────────────────────
+
+        private void OnBoardChanged(Board board)
+        {
+            if (_animating)
+                _pendingBoard = board;   // will redraw after animation finishes
+            else
+                Redraw(board);
+        }
+
+        private void OnMoveMade(Move move)
+        {
+            _animating = true;
+            StartCoroutine(AnimateMove(move));
+        }
+
+        // ─── Animation coroutine ──────────────────────────────────────────
+
+        private IEnumerator AnimateMove(Move move)
+        {
+            ClearHighlights();
+
+            var fromPos = move.From;
+            var toPos   = move.To;
+
+            // Grab the moving piece GO (may not exist yet if Redraw hasn't run)
+            _pieces.TryGetValue(fromPos, out var movingGO);
+
+            Vector3 startWorld = Cell(fromPos.Row, fromPos.Col);
+            Vector3 endWorld   = Cell(toPos.Row,   toPos.Col);
+
+            // Collect captured GOs and their start scales/colours
+            var capturedGOs = new List<(GameObject go, SpriteRenderer[] srs)>();
+            foreach (var cap in move.Captures)
+            {
+                if (_pieces.TryGetValue(cap, out var capGO))
+                {
+                    var srs = capGO.GetComponentsInChildren<SpriteRenderer>();
+                    capturedGOs.Add((capGO, srs));
+                }
+            }
+
+            float elapsed = 0f;
+            while (elapsed < AnimDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t  = Mathf.Clamp01(elapsed / AnimDuration);
+                float te = t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f; // ease in-out quad
+
+                // Slide moving piece
+                if (movingGO != null)
+                    movingGO.transform.position = Vector3.Lerp(startWorld, endWorld, te);
+
+                // Scale + fade captured pieces
+                float fadeFactor = 1f - te;
+                foreach (var (capGO, srs) in capturedGOs)
+                {
+                    capGO.transform.localScale = Vector3.one * Mathf.Lerp(1f, 0f, te);
+                    foreach (var sr in srs)
+                    {
+                        var c = sr.color;
+                        sr.color = new Color(c.r, c.g, c.b, fadeFactor);
+                    }
+                }
+
+                yield return null;
+            }
+
+            // Animation done – final redraw from pending board
+            _animating = false;
+            if (_pendingBoard != null)
+            {
+                var b = _pendingBoard;
+                _pendingBoard = null;
+                Redraw(b);
+            }
         }
 
         // ═════════════════════════════════════════════════════════════════
